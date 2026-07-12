@@ -109,6 +109,16 @@ th { color: #64748b; font-size: .75rem; letter-spacing: .04em; text-transform: u
 .payment-card { border-top: 1px solid #e2e8f0; }
 .payment-card:first-child { border-top: 0; }
 .payment-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: .6rem; align-items: end; padding-bottom: 1rem; }
+.analytics-stack { display: grid; gap: 1.5rem; }
+.date-range { display: grid; grid-template-columns: repeat(2, minmax(0, 14rem)) auto; align-items: end; gap: .75rem; margin-bottom: .75rem; padding: 1rem 1.25rem; }
+.range-note { margin-bottom: 1.5rem; color: #64748b; font-size: .8rem; }
+.metric-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); gap: .75rem; margin: 1rem 0; }
+.metric-cards > div { border-radius: .65rem; background: #f8fafc; padding: 1rem; }
+.metric-cards span, .metric-cards strong { display: block; }
+.metric-cards span { color: #64748b; font-size: .75rem; }
+.metric-cards strong { margin-top: .3rem; font-size: 1.35rem; }
+.automation-row { display: grid; grid-template-columns: minmax(11rem, 1fr) 8rem minmax(10rem, 1fr) auto; align-items: end; gap: .75rem; border-top: 1px solid #e2e8f0; padding: 1rem 0; }
+.automation-row small { display: block; margin-top: .25rem; color: #64748b; }
 fieldset { display: grid; gap: .45rem; border: 1px solid #e2e8f0; border-radius: .5rem; padding: .75rem; }
 legend { padding: 0 .35rem; color: #334155; font-size: .875rem; font-weight: 700; }
 
@@ -123,6 +133,7 @@ legend { padding: 0 .35rem; color: #334155; font-size: .875rem; font-weight: 700
   .metrics-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .feedback-action { grid-template-columns: 1fr; }
   .payment-form { grid-template-columns: 1fr; }
+  .date-range, .automation-row { grid-template-columns: 1fr; }
   .record-row { align-items: flex-start; flex-direction: column; }
   .record-row > div:last-child { justify-items: start; }
 }

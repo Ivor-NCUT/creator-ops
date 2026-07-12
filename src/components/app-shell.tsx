@@ -7,12 +7,14 @@ export function AppShell({ eyebrow, title, children }: { eyebrow: string; title:
     <aside className="app-sidebar">
       <Link className="brand" href="/">Creator Ops</Link>
       <nav aria-label="主要导航">
+        <Link href="/dashboard">经营看板</Link>
         <Link href="/work">工作</Link>
         <Link href="/content">内容生产</Link>
         <Link href="/live">直播电商</Link>
         <Link href="/people">人员</Link>
         <Link href="/business">商务</Link>
         <Link href="/settings/members">成员设置</Link>
+        <Link href="/settings/automations">自动化</Link>
       </nav>
       <form action={signOut}><button className="button-secondary w-full" type="submit">退出</button></form>
     </aside>

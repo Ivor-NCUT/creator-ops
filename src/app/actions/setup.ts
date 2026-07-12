@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
+import { AutomationRuleType } from "@/generated/prisma/client";
 import { recordAuditEvent } from "@/lib/audit";
 import { db } from "@/lib/db";
 
@@ -37,6 +38,7 @@ export async function initializeOwner(formData: FormData) {
       const member = await tx.member.create({
         data: { organizationId: organization.id, userId, role: "OWNER" },
       });
+      await tx.automationRule.createMany({ data: Object.values(AutomationRuleType).map((type) => ({ organizationId: organization.id, type })) });
       await recordAuditEvent(tx, {
         organizationId: organization.id,
         actorId: member.id,
