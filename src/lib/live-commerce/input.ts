@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { Prisma } from "@/generated/prisma/client";
 
 const optionalId = z.string().trim().min(1).optional().or(z.literal(""));
 const optionalText = (max: number) => z.string().trim().max(max).optional().or(z.literal(""));
@@ -46,8 +47,8 @@ export const performanceInput = z.object({
 }).refine(({ clicks, impressions }) => clicks <= impressions, { path: ["clicks"], message: "点击不能超过曝光" })
   .refine(({ orders, clicks }) => orders <= clicks, { path: ["orders"], message: "订单不能超过点击" })
   .refine(({ buyers, orders }) => buyers <= orders, { path: ["buyers"], message: "买家不能超过订单" })
-  .refine(({ refundAmount, gmv }) => Number(refundAmount) <= Number(gmv), { path: ["refundAmount"], message: "退款金额不能超过 GMV" })
-  .refine(({ commission, gmv }) => Number(commission) <= Number(gmv), { path: ["commission"], message: "佣金不能超过 GMV" });
+  .refine(({ refundAmount, gmv }) => new Prisma.Decimal(refundAmount).lte(gmv), { path: ["refundAmount"], message: "退款金额不能超过 GMV" })
+  .refine(({ commission, gmv }) => new Prisma.Decimal(commission).lte(gmv), { path: ["commission"], message: "佣金不能超过 GMV" });
 
 export const feedbackInput = z.object({
   liveSessionId: optionalId,

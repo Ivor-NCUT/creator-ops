@@ -109,7 +109,8 @@ export async function saveSessionReview(formData: FormData) {
   if (!parsed.success) redirect(`/live/${id}?error=invalid-review`);
   const session = await db.liveSession.findFirst({ where: { id, organizationId: actor.organizationId, ...(manage(actor.role) ? {} : { ownerId: actor.id }) }, select: { id: true, status: true } });
   if (!session || session.status !== "COMPLETED") redirect(`/live/${id}?error=invalid-review-state`);
-  await db.liveSession.update({ where: { id }, data: parsed.data });
+  const changed = await db.liveSession.updateMany({ where: { id, organizationId: actor.organizationId, status: "COMPLETED" }, data: parsed.data });
+  if (changed.count !== 1) redirect(`/live/${id}?error=review-conflict`);
   revalidatePath(`/live/${id}`);
   redirect(`/live/${id}?success=review-saved`);
 }
