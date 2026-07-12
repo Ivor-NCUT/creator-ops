@@ -29,6 +29,11 @@ model Organization {
   contentItems  ContentItem[]
   publications  Publication[]
   workEvents    WorkEvent[]
+  liveSessions  LiveSession[]
+  suppliers     CommerceSupplier[]
+  products      CommerceProduct[]
+  customerFeedback CustomerFeedback[]
+  liveProductPerformance LiveProductPerformance[]
 }
 
 enum SystemRole {
@@ -146,6 +151,11 @@ model Member {
   contentStatusChanges ContentStatusHistory[]
   contentAssignments ContentAssignment[]
   workEvents     WorkEvent[]
+  ownedLiveSessions LiveSession[] @relation("LiveSessionOwner")
+  liveAssignments LiveSessionStaff[]
+  liveStatusChanges LiveSessionStatusHistory[]
+  assignedFeedback CustomerFeedback[] @relation("FeedbackAssignee")
+  feedbackStatusChanges FeedbackStatusHistory[]
 
   @@index([organizationId, role])
   @@index([departmentId])
@@ -328,6 +338,7 @@ model ContentItem {
   assignments    ContentAssignment[]
   publications   Publication[]
   workEvents     WorkEvent[]
+  livePreviews   LiveSessionPreview[]
 
   @@index([organizationId, type, status, plannedAt])
   @@index([ownerId])
@@ -437,6 +448,215 @@ model WorkEvent {
 
   @@index([organizationId, occurredAt])
   @@index([memberId, occurredAt])
+}
+
+enum LiveSessionStatus {
+  PLANNED
+  CONFIRMED
+  LIVE
+  COMPLETED
+  REVIEWED
+  CANCELLED
+}
+
+enum LiveStaffRole {
+  HOST
+  CO_HOST
+  OPERATOR
+  MODERATOR
+  SUPPORT
+}
+
+model LiveSession {
+  id             String            @id @default(cuid())
+  organizationId String
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  title          String
+  channel        String
+  status         LiveSessionStatus @default(PLANNED)
+  ownerId        String
+  owner          Member            @relation("LiveSessionOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  startsAt       DateTime
+  endsAt         DateTime?
+  actualStartsAt DateTime?
+  actualEndsAt   DateTime?
+  viewers        Int               @default(0)
+  peakViewers    Int               @default(0)
+  newFollowers   Int               @default(0)
+  reviewSummary  String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  staff          LiveSessionStaff[]
+  previews       LiveSessionPreview[]
+  statusHistory  LiveSessionStatusHistory[]
+  productPerformance LiveProductPerformance[]
+  feedback       CustomerFeedback[]
+
+  @@index([organizationId, startsAt])
+  @@index([organizationId, status, startsAt])
+}
+
+model LiveSessionStaff {
+  liveSessionId String
+  memberId      String
+  role          LiveStaffRole
+  liveSession   LiveSession @relation(fields: [liveSessionId], references: [id], onDelete: Cascade)
+  member        Member      @relation(fields: [memberId], references: [id], onDelete: Restrict)
+
+  @@id([liveSessionId, memberId, role])
+  @@index([memberId])
+}
+
+model LiveSessionPreview {
+  liveSessionId String
+  contentId     String
+  liveSession   LiveSession @relation(fields: [liveSessionId], references: [id], onDelete: Cascade)
+  content       ContentItem @relation(fields: [contentId], references: [id], onDelete: Restrict)
+
+  @@id([liveSessionId, contentId])
+  @@index([contentId])
+}
+
+model LiveSessionStatusHistory {
+  id            String            @id @default(cuid())
+  liveSessionId String
+  liveSession   LiveSession       @relation(fields: [liveSessionId], references: [id], onDelete: Cascade)
+  fromStatus    LiveSessionStatus?
+  toStatus      LiveSessionStatus
+  actorId       String
+  actor         Member            @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  note          String?
+  createdAt     DateTime          @default(now())
+
+  @@index([liveSessionId, createdAt])
+  @@index([actorId, createdAt])
+}
+
+model CommerceSupplier {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  name           String
+  contactName    String?
+  contactPhone   String?
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  products       CommerceProduct[]
+
+  @@unique([organizationId, name])
+}
+
+model CommerceProduct {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  supplierId     String?
+  supplier       CommerceSupplier? @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  name           String
+  sku            String?
+  currency       String       @default("CNY")
+  listPrice      Decimal?     @db.Decimal(18, 2)
+  active         Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  livePerformance LiveProductPerformance[]
+  feedback       CustomerFeedback[]
+
+  @@unique([organizationId, sku])
+  @@index([organizationId, active])
+  @@index([supplierId])
+}
+
+model LiveProductPerformance {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  liveSessionId  String
+  liveSession    LiveSession  @relation(fields: [liveSessionId], references: [id], onDelete: Restrict)
+  productId      String
+  product        CommerceProduct @relation(fields: [productId], references: [id], onDelete: Restrict)
+  impressions    Int          @default(0)
+  clicks         Int          @default(0)
+  orders         Int          @default(0)
+  buyers         Int          @default(0)
+  gmv            Decimal      @default(0) @db.Decimal(18, 2)
+  refundAmount   Decimal      @default(0) @db.Decimal(18, 2)
+  inventory      Int          @default(0)
+  commission     Decimal      @default(0) @db.Decimal(18, 2)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([liveSessionId, productId])
+  @@index([organizationId, liveSessionId])
+  @@index([productId])
+}
+
+enum FeedbackKind {
+  REVIEW
+  COMPLAINT
+}
+
+enum FeedbackCategory {
+  PRODUCT_QUALITY
+  SHIPPING
+  SERVICE
+  REFUND
+  CONTENT
+  OTHER
+}
+
+enum FeedbackStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_CUSTOMER
+  RESOLVED
+  CLOSED
+}
+
+model CustomerFeedback {
+  id             String           @id @default(cuid())
+  organizationId String
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  liveSessionId  String?
+  liveSession    LiveSession?     @relation(fields: [liveSessionId], references: [id], onDelete: Restrict)
+  productId      String?
+  product        CommerceProduct? @relation(fields: [productId], references: [id], onDelete: Restrict)
+  kind           FeedbackKind
+  category       FeedbackCategory
+  status         FeedbackStatus   @default(OPEN)
+  isNegative     Boolean          @default(false)
+  title          String
+  detail         String?
+  source         String?
+  assigneeId     String?
+  assignee       Member?          @relation("FeedbackAssignee", fields: [assigneeId], references: [id], onDelete: Restrict)
+  resolution     String?
+  resolvedAt     DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  statusHistory  FeedbackStatusHistory[]
+
+  @@index([organizationId, status, createdAt])
+  @@index([assigneeId, status])
+  @@index([liveSessionId])
+  @@index([productId])
+}
+
+model FeedbackStatusHistory {
+  id          String         @id @default(cuid())
+  feedbackId  String
+  feedback    CustomerFeedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+  fromStatus  FeedbackStatus?
+  toStatus    FeedbackStatus
+  actorId     String
+  actor       Member         @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  note        String?
+  resolution  String?
+  createdAt   DateTime       @default(now())
+
+  @@index([feedbackId, createdAt])
+  @@index([actorId, createdAt])
 }
 
 model AuditEvent {

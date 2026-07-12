@@ -9,6 +9,7 @@ export function AppShell({ eyebrow, title, children }: { eyebrow: string; title:
       <nav aria-label="主要导航">
         <Link href="/work">工作</Link>
         <Link href="/content">内容生产</Link>
+        <Link href="/live">直播电商</Link>
         <Link href="/settings/members">成员设置</Link>
       </nav>
       <form action={signOut}><button className="button-secondary w-full" type="submit">退出</button></form>

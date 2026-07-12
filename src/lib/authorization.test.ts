@@ -19,3 +19,8 @@ test("sensitive permissions remain separated", () => {
   assert.equal(roleCan("FINANCE", "finance:read"), true);
   assert.equal(roleCan("FINANCE", "people:sensitive"), false);
 });
+
+test("live commerce management is limited to operational managers", () => {
+  for (const role of ["OWNER", "ADMIN", "MANAGER"] as const) assert.equal(roleCan(role, "live:manage"), true);
+  for (const role of ["HR", "FINANCE", "MEMBER", "VIEWER"] as const) assert.equal(roleCan(role, "live:manage"), false);
+});

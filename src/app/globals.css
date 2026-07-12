@@ -89,6 +89,17 @@ th { color: #64748b; font-size: .75rem; letter-spacing: .04em; text-transform: u
 .snapshot-strip span, .snapshot-strip small { color: #64748b; font-size: .75rem; }
 .metrics-form { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: .6rem; align-items: end; }
 .loading-state { min-height: 100dvh; display: grid; place-content: center; padding: 2rem; color: #64748b; text-align: center; }
+.subnav { display: flex; gap: .5rem; overflow-x: auto; margin-bottom: 1.5rem; }
+.subnav a { white-space: nowrap; border: 1px solid #cbd5e1; border-radius: 999px; background: white; padding: .45rem .8rem; color: #475569; font-size: .85rem; font-weight: 700; }
+.feedback-stack { display: grid; gap: 1rem; margin-top: 1rem; }
+.feedback-card { border-top: 1px solid #e2e8f0; padding-top: 1rem; }
+.feedback-card h3 { font-weight: 700; }
+.feedback-action { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: .6rem; align-items: end; margin-top: 1rem; }
+.feedback-card details { margin-top: 1rem; color: #475569; }
+.feedback-card summary { cursor: pointer; font-weight: 700; }
+.checkbox-label { display: flex; align-items: center; gap: .55rem; }
+.checkbox-label input { width: auto; margin: 0; }
+.whitespace-pre-wrap { white-space: pre-wrap; }
 
 @media (max-width: 900px) {
   .app-shell { display: block; }
@@ -99,6 +110,7 @@ th { color: #64748b; font-size: .75rem; letter-spacing: .04em; text-transform: u
   .span-2 { grid-column: auto; }
   .detail-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .metrics-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .feedback-action { grid-template-columns: 1fr; }
   .record-row { align-items: flex-start; flex-direction: column; }
   .record-row > div:last-child { justify-items: start; }
 }
