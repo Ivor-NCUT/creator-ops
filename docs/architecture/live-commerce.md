@@ -1,6 +1,6 @@
 # 直播电商与客诉
 
-`LiveSession` 承载排期、人员、基础指标与复盘，通过 `LiveSessionPreview` 关联内容域已有视频。商品只保留直播域必需资料；`CommerceSupplier` 是轻量外部主体，后续 CRM 可扩展它，不再建第二张供应商表。
+`LiveSession` 承载排期、人员、基础指标与复盘，通过 `LiveSessionPreview` 关联内容域已有视频。商品只保留直播域必需资料；供应商引用 CRM 的统一 `ExternalParty`，由原 `CommerceSupplier` 原位迁移并保留 ID，不存在第二张供应商表。
 
 `LiveProductPerformance` 按“场次 × 商品”唯一存储曝光、点击、订单、买家、GMV、退款、库存和佣金源值。点击率、订单转化率和退款率由 `src/lib/live-commerce/metrics.ts` 用 Prisma Decimal 即时计算，不保存可过期的派生值，分母为零时返回零。
 

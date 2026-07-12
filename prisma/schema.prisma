@@ -8,32 +8,39 @@ datasource db {
 }
 
 model Organization {
-  id            String         @id @default(cuid())
-  name          String
-  slug          String         @unique
-  timezone      String         @default("Asia/Shanghai")
-  locale        String         @default("zh-CN")
-  currency      String         @default("CNY")
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  departments   Department[]
-  members       Member[]
-  auditEvents   AuditEvent[]
-  files         FileMetadata[]
-  notifications Notification[]
-  projects      Project[]
-  tasks         Task[]
-  aiRequests    AiRequest[]
-  contentProfiles ContentProfile[]
-  publishingAccounts PublishingAccount[]
-  contentItems  ContentItem[]
-  publications  Publication[]
-  workEvents    WorkEvent[]
-  liveSessions  LiveSession[]
-  suppliers     CommerceSupplier[]
-  products      CommerceProduct[]
-  customerFeedback CustomerFeedback[]
+  id                     String                   @id @default(cuid())
+  name                   String
+  slug                   String                   @unique
+  timezone               String                   @default("Asia/Shanghai")
+  locale                 String                   @default("zh-CN")
+  currency               String                   @default("CNY")
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  departments            Department[]
+  members                Member[]
+  auditEvents            AuditEvent[]
+  files                  FileMetadata[]
+  notifications          Notification[]
+  projects               Project[]
+  tasks                  Task[]
+  aiRequests             AiRequest[]
+  contentProfiles        ContentProfile[]
+  publishingAccounts     PublishingAccount[]
+  contentItems           ContentItem[]
+  publications           Publication[]
+  workEvents             WorkEvent[]
+  liveSessions           LiveSession[]
+  externalParties        ExternalParty[]
+  products               CommerceProduct[]
+  customerFeedback       CustomerFeedback[]
   liveProductPerformance LiveProductPerformance[]
+  employeeProfiles       EmployeeProfile[]
+  attendanceExceptions   AttendanceException[]
+  monthlyAttendance      MonthlyAttendance[]
+  payrollMonths          PayrollMonth[]
+  majorErrors            MajorError[]
+  contracts              Contract[]
+  paymentItems           PaymentItem[]
 }
 
 enum SystemRole {
@@ -129,33 +136,42 @@ model Department {
 }
 
 model Member {
-  id             String         @id @default(cuid())
-  organizationId String
-  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  userId         String         @unique
-  user           User           @relation(fields: [userId], references: [id], onDelete: Restrict)
-  departmentId   String?
-  department     Department?    @relation(fields: [departmentId], references: [id], onDelete: SetNull)
-  role           SystemRole     @default(MEMBER)
-  status         MemberStatus   @default(ACTIVE)
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  auditEvents    AuditEvent[]   @relation("AuditActor")
-  notifications  Notification[]
-  ownedProjects  Project[]            @relation("ProjectOwner")
-  projectMemberships ProjectMember[]
-  assignedTasks  Task[]               @relation("TaskAssignee")
-  requestedAiRequests AiRequest[]      @relation("AiRequester")
-  ownedAiRequests AiRequest[]          @relation("AiOwner")
-  ownedContent   ContentItem[]         @relation("ContentOwner")
-  contentStatusChanges ContentStatusHistory[]
-  contentAssignments ContentAssignment[]
-  workEvents     WorkEvent[]
-  ownedLiveSessions LiveSession[] @relation("LiveSessionOwner")
-  liveAssignments LiveSessionStaff[]
-  liveStatusChanges LiveSessionStatusHistory[]
-  assignedFeedback CustomerFeedback[] @relation("FeedbackAssignee")
-  feedbackStatusChanges FeedbackStatusHistory[]
+  id                            String                      @id @default(cuid())
+  organizationId                String
+  organization                  Organization                @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  userId                        String                      @unique
+  user                          User                        @relation(fields: [userId], references: [id], onDelete: Restrict)
+  departmentId                  String?
+  department                    Department?                 @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  role                          SystemRole                  @default(MEMBER)
+  status                        MemberStatus                @default(ACTIVE)
+  createdAt                     DateTime                    @default(now())
+  updatedAt                     DateTime                    @updatedAt
+  auditEvents                   AuditEvent[]                @relation("AuditActor")
+  notifications                 Notification[]
+  ownedProjects                 Project[]                   @relation("ProjectOwner")
+  projectMemberships            ProjectMember[]
+  assignedTasks                 Task[]                      @relation("TaskAssignee")
+  requestedAiRequests           AiRequest[]                 @relation("AiRequester")
+  ownedAiRequests               AiRequest[]                 @relation("AiOwner")
+  ownedContent                  ContentItem[]               @relation("ContentOwner")
+  contentStatusChanges          ContentStatusHistory[]
+  contentAssignments            ContentAssignment[]
+  workEvents                    WorkEvent[]
+  ownedLiveSessions             LiveSession[]               @relation("LiveSessionOwner")
+  liveAssignments               LiveSessionStaff[]
+  liveStatusChanges             LiveSessionStatusHistory[]
+  assignedFeedback              CustomerFeedback[]          @relation("FeedbackAssignee")
+  feedbackStatusChanges         FeedbackStatusHistory[]
+  employeeProfile               EmployeeProfile?
+  submittedAttendanceExceptions AttendanceException[]       @relation("AttendanceSubmitter")
+  approvedAttendanceExceptions  AttendanceException[]       @relation("AttendanceApprover")
+  attendanceApprovalHistory     AttendanceApprovalHistory[]
+  majorErrorsReported           MajorError[]                @relation("MajorErrorReporter")
+  majorErrorsReviewed           MajorError[]                @relation("MajorErrorReviewer")
+  contractOwnership             Contract[]                  @relation("ContractOwner")
+  contractStatusChanges         ContractStatusHistory[]
+  paymentRecords                PaymentRecord[]
 
   @@index([organizationId, role])
   @@index([departmentId])
@@ -177,19 +193,19 @@ enum Priority {
 }
 
 model Project {
-  id             String       @id @default(cuid())
+  id             String          @id @default(cuid())
   organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   name           String
   description    String?
-  status         WorkStatus   @default(PLANNED)
-  priority       Priority     @default(NORMAL)
+  status         WorkStatus      @default(PLANNED)
+  priority       Priority        @default(NORMAL)
   ownerId        String
-  owner          Member       @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  owner          Member          @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Restrict)
   startsAt       DateTime?
   dueAt          DateTime?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
   members        ProjectMember[]
   tasks          Task[]
   aiRequests     AiRequest[]
@@ -244,23 +260,23 @@ enum AiRequestStatus {
 }
 
 model AiRequest {
-  id             String          @id @default(cuid())
-  organizationId String
-  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  projectId      String?
-  project        Project?        @relation(fields: [projectId], references: [id], onDelete: Restrict)
-  title          String
-  problem        String
+  id              String          @id @default(cuid())
+  organizationId  String
+  organization    Organization    @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  projectId       String?
+  project         Project?        @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  title           String
+  problem         String
   expectedOutcome String
-  status         AiRequestStatus @default(SUBMITTED)
-  priority       Priority        @default(NORMAL)
-  requesterId    String
-  requester      Member          @relation("AiRequester", fields: [requesterId], references: [id], onDelete: Restrict)
-  ownerId        String?
-  owner          Member?         @relation("AiOwner", fields: [ownerId], references: [id], onDelete: Restrict)
-  dueAt          DateTime?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  status          AiRequestStatus @default(SUBMITTED)
+  priority        Priority        @default(NORMAL)
+  requesterId     String
+  requester       Member          @relation("AiRequester", fields: [requesterId], references: [id], onDelete: Restrict)
+  ownerId         String?
+  owner           Member?         @relation("AiOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  dueAt           DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
   @@index([organizationId, status, dueAt])
   @@index([requesterId])
@@ -287,51 +303,51 @@ enum ContentStatus {
 }
 
 model ContentProfile {
-  id             String       @id @default(cuid())
+  id             String        @id @default(cuid())
   organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   name           String
-  active         Boolean      @default(true)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  active         Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
   contentItems   ContentItem[]
 
   @@unique([organizationId, name])
 }
 
 model PublishingAccount {
-  id             String       @id @default(cuid())
+  id             String        @id @default(cuid())
   organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   name           String
   channel        String
-  active         Boolean      @default(true)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  active         Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
   publications   Publication[]
 
   @@unique([organizationId, channel, name])
 }
 
 model ContentItem {
-  id             String       @id @default(cuid())
+  id             String                 @id @default(cuid())
   organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  organization   Organization           @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   projectId      String?
-  project        Project?     @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  project        Project?               @relation(fields: [projectId], references: [id], onDelete: Restrict)
   profileId      String?
-  profile        ContentProfile? @relation(fields: [profileId], references: [id], onDelete: Restrict)
+  profile        ContentProfile?        @relation(fields: [profileId], references: [id], onDelete: Restrict)
   ownerId        String
-  owner          Member       @relation("ContentOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  owner          Member                 @relation("ContentOwner", fields: [ownerId], references: [id], onDelete: Restrict)
   type           ContentType
   title          String
   summary        String?
-  status         ContentStatus @default(IDEA)
-  priority       Priority      @default(NORMAL)
+  status         ContentStatus          @default(IDEA)
+  priority       Priority               @default(NORMAL)
   plannedAt      DateTime?
   dueAt          DateTime?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
   video          VideoDetail?
   editorial      EditorialDetail?
   statusHistory  ContentStatusHistory[]
@@ -345,20 +361,20 @@ model ContentItem {
 }
 
 model VideoDetail {
-  contentId       String      @id
-  content         ContentItem @relation(fields: [contentId], references: [id], onDelete: Cascade)
-  scriptUrl       String?
-  footageUrl      String?
-  workloadPoints  Int         @default(1)
-  slaStartedAt    DateTime?
+  contentId      String      @id
+  content        ContentItem @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  scriptUrl      String?
+  footageUrl     String?
+  workloadPoints Int         @default(1)
+  slaStartedAt   DateTime?
 }
 
 model EditorialDetail {
-  contentId       String      @id
-  content         ContentItem @relation(fields: [contentId], references: [id], onDelete: Cascade)
-  topic           String?
-  manuscriptUrl   String?
-  workloadPoints  Int         @default(1)
+  contentId      String      @id
+  content        ContentItem @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  topic          String?
+  manuscriptUrl  String?
+  workloadPoints Int         @default(1)
 }
 
 enum ContentAssignmentRole {
@@ -373,39 +389,39 @@ model ContentAssignment {
   contentId String
   memberId  String
   role      ContentAssignmentRole
-  content   ContentItem @relation(fields: [contentId], references: [id], onDelete: Cascade)
-  member    Member      @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  content   ContentItem           @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  member    Member                @relation(fields: [memberId], references: [id], onDelete: Restrict)
 
   @@id([contentId, memberId, role])
   @@index([memberId, role])
 }
 
 model ContentStatusHistory {
-  id          String        @id @default(cuid())
-  contentId   String
-  content     ContentItem   @relation(fields: [contentId], references: [id], onDelete: Cascade)
-  fromStatus  ContentStatus?
-  toStatus    ContentStatus
-  actorId     String
-  actor       Member        @relation(fields: [actorId], references: [id], onDelete: Restrict)
-  note        String?
-  createdAt   DateTime      @default(now())
+  id         String         @id @default(cuid())
+  contentId  String
+  content    ContentItem    @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  fromStatus ContentStatus?
+  toStatus   ContentStatus
+  actorId    String
+  actor      Member         @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  note       String?
+  createdAt  DateTime       @default(now())
 
   @@index([contentId, createdAt])
   @@index([actorId, createdAt])
 }
 
 model Publication {
-  id             String       @id @default(cuid())
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  contentId      String
-  content        ContentItem  @relation(fields: [contentId], references: [id], onDelete: Restrict)
-  accountId      String
-  account        PublishingAccount @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  publishedAt    DateTime
-  url            String?
-  createdAt      DateTime     @default(now())
+  id              String                      @id @default(cuid())
+  organizationId  String
+  organization    Organization                @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  contentId       String
+  content         ContentItem                 @relation(fields: [contentId], references: [id], onDelete: Restrict)
+  accountId       String
+  account         PublishingAccount           @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  publishedAt     DateTime
+  url             String?
+  createdAt       DateTime                    @default(now())
   metricSnapshots PublicationMetricSnapshot[]
 
   @@unique([contentId, accountId, publishedAt])
@@ -468,29 +484,29 @@ enum LiveStaffRole {
 }
 
 model LiveSession {
-  id             String            @id @default(cuid())
-  organizationId String
-  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  title          String
-  channel        String
-  status         LiveSessionStatus @default(PLANNED)
-  ownerId        String
-  owner          Member            @relation("LiveSessionOwner", fields: [ownerId], references: [id], onDelete: Restrict)
-  startsAt       DateTime
-  endsAt         DateTime?
-  actualStartsAt DateTime?
-  actualEndsAt   DateTime?
-  viewers        Int               @default(0)
-  peakViewers    Int               @default(0)
-  newFollowers   Int               @default(0)
-  reviewSummary  String?
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
-  staff          LiveSessionStaff[]
-  previews       LiveSessionPreview[]
-  statusHistory  LiveSessionStatusHistory[]
+  id                 String                     @id @default(cuid())
+  organizationId     String
+  organization       Organization               @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  title              String
+  channel            String
+  status             LiveSessionStatus          @default(PLANNED)
+  ownerId            String
+  owner              Member                     @relation("LiveSessionOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  startsAt           DateTime
+  endsAt             DateTime?
+  actualStartsAt     DateTime?
+  actualEndsAt       DateTime?
+  viewers            Int                        @default(0)
+  peakViewers        Int                        @default(0)
+  newFollowers       Int                        @default(0)
+  reviewSummary      String?
+  createdAt          DateTime                   @default(now())
+  updatedAt          DateTime                   @updatedAt
+  staff              LiveSessionStaff[]
+  previews           LiveSessionPreview[]
+  statusHistory      LiveSessionStatusHistory[]
   productPerformance LiveProductPerformance[]
-  feedback       CustomerFeedback[]
+  feedback           CustomerFeedback[]
 
   @@index([organizationId, startsAt])
   @@index([organizationId, status, startsAt])
@@ -500,8 +516,8 @@ model LiveSessionStaff {
   liveSessionId String
   memberId      String
   role          LiveStaffRole
-  liveSession   LiveSession @relation(fields: [liveSessionId], references: [id], onDelete: Cascade)
-  member        Member      @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  liveSession   LiveSession   @relation(fields: [liveSessionId], references: [id], onDelete: Cascade)
+  member        Member        @relation(fields: [memberId], references: [id], onDelete: Restrict)
 
   @@id([liveSessionId, memberId, role])
   @@index([memberId])
@@ -518,74 +534,366 @@ model LiveSessionPreview {
 }
 
 model LiveSessionStatusHistory {
-  id            String            @id @default(cuid())
+  id            String             @id @default(cuid())
   liveSessionId String
-  liveSession   LiveSession       @relation(fields: [liveSessionId], references: [id], onDelete: Cascade)
+  liveSession   LiveSession        @relation(fields: [liveSessionId], references: [id], onDelete: Cascade)
   fromStatus    LiveSessionStatus?
   toStatus      LiveSessionStatus
   actorId       String
-  actor         Member            @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  actor         Member             @relation(fields: [actorId], references: [id], onDelete: Restrict)
   note          String?
-  createdAt     DateTime          @default(now())
+  createdAt     DateTime           @default(now())
 
   @@index([liveSessionId, createdAt])
   @@index([actorId, createdAt])
 }
 
-model CommerceSupplier {
-  id             String       @id @default(cuid())
+enum ExternalPartyType {
+  CUSTOMER
+  SUPPLIER
+  SERVICE_PROVIDER
+  CONSULTANT
+}
+
+model ExternalParty {
+  id             String              @id @default(cuid())
   organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   name           String
+  types          ExternalPartyType[] @default([SUPPLIER])
   contactName    String?
   contactPhone   String?
+  contactEmail   String?
+  taxNumber      String?
   notes          String?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  active         Boolean             @default(true)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
   products       CommerceProduct[]
+  contracts      Contract[]
+  paymentItems   PaymentItem[]
 
   @@unique([organizationId, name])
 }
 
 model CommerceProduct {
-  id             String       @id @default(cuid())
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  supplierId     String?
-  supplier       CommerceSupplier? @relation(fields: [supplierId], references: [id], onDelete: Restrict)
-  name           String
-  sku            String?
-  currency       String       @default("CNY")
-  listPrice      Decimal?     @db.Decimal(18, 2)
-  active         Boolean      @default(true)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  id              String                   @id @default(cuid())
+  organizationId  String
+  organization    Organization             @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  supplierId      String?
+  supplier        ExternalParty?           @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  name            String
+  sku             String?
+  currency        String                   @default("CNY")
+  listPrice       Decimal?                 @db.Decimal(18, 2)
+  active          Boolean                  @default(true)
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
   livePerformance LiveProductPerformance[]
-  feedback       CustomerFeedback[]
+  feedback        CustomerFeedback[]
 
   @@unique([organizationId, sku])
   @@index([organizationId, active])
   @@index([supplierId])
 }
 
-model LiveProductPerformance {
-  id             String       @id @default(cuid())
+enum EmploymentStatus {
+  ACTIVE
+  PROBATION
+  LEAVE
+  TERMINATED
+}
+
+model EmployeeProfile {
+  id                   String                @id @default(cuid())
+  organizationId       String
+  organization         Organization          @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  memberId             String                @unique
+  member               Member                @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  employeeNo           String
+  jobTitle             String?
+  employmentStatus     EmploymentStatus      @default(ACTIVE)
+  hiredAt              DateTime?
+  endedAt              DateTime?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  identity             EmployeeIdentity?
+  compensation         EmployeeCompensation?
+  attendanceExceptions AttendanceException[]
+  monthlyAttendance    MonthlyAttendance[]
+  payrollMonths        PayrollMonth[]
+  majorErrors          MajorError[]
+
+  @@unique([organizationId, employeeNo])
+  @@index([organizationId, employmentStatus])
+}
+
+model EmployeeIdentity {
+  employeeId       String          @id
+  employee         EmployeeProfile @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  legalName        String
+  idType           String?
+  idNumber         String?
+  phone            String?
+  personalEmail    String?
+  address          String?
+  emergencyContact String?
+  emergencyPhone   String?
+  updatedAt        DateTime        @updatedAt
+}
+
+model EmployeeCompensation {
+  employeeId String          @id
+  employee   EmployeeProfile @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  baseSalary Decimal         @default(0) @db.Decimal(18, 2)
+  currency   String          @default("CNY")
+  updatedAt  DateTime        @updatedAt
+}
+
+enum AttendanceExceptionKind {
+  LATE
+  EARLY_LEAVE
+  ABSENCE
+  LEAVE
+  MISSING_PUNCH
+  OVERTIME
+  OTHER
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+model AttendanceException {
+  id             String                      @id @default(cuid())
   organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  organization   Organization                @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  employeeId     String
+  employee       EmployeeProfile             @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  occurredOn     DateTime                    @db.Date
+  kind           AttendanceExceptionKind
+  minutes        Int?
+  days           Decimal?                    @db.Decimal(6, 2)
+  reason         String
+  status         ApprovalStatus              @default(PENDING)
+  submittedById  String
+  submittedBy    Member                      @relation("AttendanceSubmitter", fields: [submittedById], references: [id], onDelete: Restrict)
+  approvedById   String?
+  approvedBy     Member?                     @relation("AttendanceApprover", fields: [approvedById], references: [id], onDelete: Restrict)
+  decidedAt      DateTime?
+  createdAt      DateTime                    @default(now())
+  updatedAt      DateTime                    @updatedAt
+  history        AttendanceApprovalHistory[]
+
+  @@index([organizationId, status, occurredOn])
+  @@index([employeeId, occurredOn])
+}
+
+model AttendanceApprovalHistory {
+  id          String              @id @default(cuid())
+  exceptionId String
+  exception   AttendanceException @relation(fields: [exceptionId], references: [id], onDelete: Cascade)
+  fromStatus  ApprovalStatus?
+  toStatus    ApprovalStatus
+  actorId     String
+  actor       Member              @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  note        String?
+  createdAt   DateTime            @default(now())
+
+  @@index([exceptionId, createdAt])
+}
+
+model MonthlyAttendance {
+  id                 String          @id @default(cuid())
+  organizationId     String
+  organization       Organization    @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  employeeId         String
+  employee           EmployeeProfile @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  year               Int
+  month              Int
+  approvedExceptions Int             @default(0)
+  lateMinutes        Int             @default(0)
+  absenceDays        Decimal         @default(0) @db.Decimal(6, 2)
+  leaveDays          Decimal         @default(0) @db.Decimal(6, 2)
+  overtimeMinutes    Int             @default(0)
+  note               String?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  @@unique([employeeId, year, month])
+  @@index([organizationId, year, month])
+}
+
+model PayrollMonth {
+  id             String          @id @default(cuid())
+  organizationId String
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  employeeId     String
+  employee       EmployeeProfile @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  year           Int
+  month          Int
+  currency       String          @default("CNY")
+  baseSalary     Decimal         @default(0) @db.Decimal(18, 2)
+  performance    Decimal         @default(0) @db.Decimal(18, 2)
+  commission     Decimal         @default(0) @db.Decimal(18, 2)
+  allowance      Decimal         @default(0) @db.Decimal(18, 2)
+  penalties      Decimal         @default(0) @db.Decimal(18, 2)
+  netPay         Decimal         @default(0) @db.Decimal(18, 2)
+  note           String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@unique([employeeId, year, month])
+  @@index([organizationId, year, month])
+}
+
+enum MajorErrorStatus {
+  REPORTED
+  CONFIRMED
+  DISMISSED
+}
+
+model MajorError {
+  id               String           @id @default(cuid())
+  organizationId   String
+  organization     Organization     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  employeeId       String
+  employee         EmployeeProfile  @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  occurredOn       DateTime         @db.Date
+  title            String
+  detail           String?
+  penaltyAmount    Decimal          @default(0) @db.Decimal(18, 2)
+  includeInPayroll Boolean          @default(true)
+  status           MajorErrorStatus @default(REPORTED)
+  reportedById     String
+  reportedBy       Member           @relation("MajorErrorReporter", fields: [reportedById], references: [id], onDelete: Restrict)
+  reviewedById     String?
+  reviewedBy       Member?          @relation("MajorErrorReviewer", fields: [reviewedById], references: [id], onDelete: Restrict)
+  reviewedAt       DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@index([organizationId, status, occurredOn])
+  @@index([employeeId, occurredOn])
+}
+
+enum ContractStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  TERMINATED
+  CANCELLED
+}
+
+model Contract {
+  id             String                  @id @default(cuid())
+  organizationId String
+  organization   Organization            @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  partyId        String
+  party          ExternalParty           @relation(fields: [partyId], references: [id], onDelete: Restrict)
+  ownerId        String
+  owner          Member                  @relation("ContractOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  number         String
+  title          String
+  status         ContractStatus          @default(DRAFT)
+  startsOn       DateTime?               @db.Date
+  endsOn         DateTime?               @db.Date
+  currency       String                  @default("CNY")
+  amount         Decimal                 @default(0) @db.Decimal(18, 2)
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+  statusHistory  ContractStatusHistory[]
+  paymentItems   PaymentItem[]
+
+  @@unique([organizationId, number])
+  @@index([organizationId, status, endsOn])
+}
+
+model ContractStatusHistory {
+  id         String          @id @default(cuid())
+  contractId String
+  contract   Contract        @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  fromStatus ContractStatus?
+  toStatus   ContractStatus
+  actorId    String
+  actor      Member          @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  note       String?
+  createdAt  DateTime        @default(now())
+
+  @@index([contractId, createdAt])
+}
+
+enum PaymentDirection {
+  RECEIVABLE
+  PAYABLE
+}
+
+enum PaymentStatus {
+  OPEN
+  PARTIAL
+  PAID
+  CANCELLED
+}
+
+model PaymentItem {
+  id             String           @id @default(cuid())
+  organizationId String
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  contractId     String?
+  contract       Contract?        @relation(fields: [contractId], references: [id], onDelete: Restrict)
+  partyId        String
+  party          ExternalParty    @relation(fields: [partyId], references: [id], onDelete: Restrict)
+  direction      PaymentDirection
+  status         PaymentStatus    @default(OPEN)
+  title          String
+  currency       String           @default("CNY")
+  amount         Decimal          @db.Decimal(18, 2)
+  paidAmount     Decimal          @default(0) @db.Decimal(18, 2)
+  dueOn          DateTime?        @db.Date
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  payments       PaymentRecord[]
+
+  @@index([organizationId, direction, status, dueOn])
+  @@index([partyId])
+  @@index([contractId])
+}
+
+model PaymentRecord {
+  id            String      @id @default(cuid())
+  paymentItemId String
+  paymentItem   PaymentItem @relation(fields: [paymentItemId], references: [id], onDelete: Restrict)
+  amount        Decimal     @db.Decimal(18, 2)
+  paidOn        DateTime    @db.Date
+  reference     String?
+  actorId       String
+  actor         Member      @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  createdAt     DateTime    @default(now())
+
+  @@index([paymentItemId, paidOn])
+}
+
+model LiveProductPerformance {
+  id             String          @id @default(cuid())
+  organizationId String
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   liveSessionId  String
-  liveSession    LiveSession  @relation(fields: [liveSessionId], references: [id], onDelete: Restrict)
+  liveSession    LiveSession     @relation(fields: [liveSessionId], references: [id], onDelete: Restrict)
   productId      String
   product        CommerceProduct @relation(fields: [productId], references: [id], onDelete: Restrict)
-  impressions    Int          @default(0)
-  clicks         Int          @default(0)
-  orders         Int          @default(0)
-  buyers         Int          @default(0)
-  gmv            Decimal      @default(0) @db.Decimal(18, 2)
-  refundAmount   Decimal      @default(0) @db.Decimal(18, 2)
-  inventory      Int          @default(0)
-  commission     Decimal      @default(0) @db.Decimal(18, 2)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  impressions    Int             @default(0)
+  clicks         Int             @default(0)
+  orders         Int             @default(0)
+  buyers         Int             @default(0)
+  gmv            Decimal         @default(0) @db.Decimal(18, 2)
+  refundAmount   Decimal         @default(0) @db.Decimal(18, 2)
+  inventory      Int             @default(0)
+  commission     Decimal         @default(0) @db.Decimal(18, 2)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
   @@unique([liveSessionId, productId])
   @@index([organizationId, liveSessionId])
@@ -615,26 +923,26 @@ enum FeedbackStatus {
 }
 
 model CustomerFeedback {
-  id             String           @id @default(cuid())
+  id             String                  @id @default(cuid())
   organizationId String
-  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  organization   Organization            @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   liveSessionId  String?
-  liveSession    LiveSession?     @relation(fields: [liveSessionId], references: [id], onDelete: Restrict)
+  liveSession    LiveSession?            @relation(fields: [liveSessionId], references: [id], onDelete: Restrict)
   productId      String?
-  product        CommerceProduct? @relation(fields: [productId], references: [id], onDelete: Restrict)
+  product        CommerceProduct?        @relation(fields: [productId], references: [id], onDelete: Restrict)
   kind           FeedbackKind
   category       FeedbackCategory
-  status         FeedbackStatus   @default(OPEN)
-  isNegative     Boolean          @default(false)
+  status         FeedbackStatus          @default(OPEN)
+  isNegative     Boolean                 @default(false)
   title          String
   detail         String?
   source         String?
   assigneeId     String?
-  assignee       Member?          @relation("FeedbackAssignee", fields: [assigneeId], references: [id], onDelete: Restrict)
+  assignee       Member?                 @relation("FeedbackAssignee", fields: [assigneeId], references: [id], onDelete: Restrict)
   resolution     String?
   resolvedAt     DateTime?
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
   statusHistory  FeedbackStatusHistory[]
 
   @@index([organizationId, status, createdAt])
@@ -644,16 +952,16 @@ model CustomerFeedback {
 }
 
 model FeedbackStatusHistory {
-  id          String         @id @default(cuid())
-  feedbackId  String
-  feedback    CustomerFeedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
-  fromStatus  FeedbackStatus?
-  toStatus    FeedbackStatus
-  actorId     String
-  actor       Member         @relation(fields: [actorId], references: [id], onDelete: Restrict)
-  note        String?
-  resolution  String?
-  createdAt   DateTime       @default(now())
+  id         String           @id @default(cuid())
+  feedbackId String
+  feedback   CustomerFeedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+  fromStatus FeedbackStatus?
+  toStatus   FeedbackStatus
+  actorId    String
+  actor      Member           @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  note       String?
+  resolution String?
+  createdAt  DateTime         @default(now())
 
   @@index([feedbackId, createdAt])
   @@index([actorId, createdAt])

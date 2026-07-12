@@ -19,6 +19,7 @@ export async function getCurrentMember() {
     select: {
       id: true,
       organizationId: true,
+      departmentId: true,
       role: true,
       status: true,
       user: { select: { id: true, name: true, email: true } },

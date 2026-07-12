@@ -40,7 +40,7 @@ export async function createSupplier(formData: FormData) {
   if (!manage(actor.role)) redirect("/live/products?error=forbidden");
   const parsed = supplierInput.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect("/live/products?error=invalid-supplier");
-  await db.commerceSupplier.create({ data: { organizationId: actor.organizationId, name: parsed.data.name, contactName: optional(parsed.data.contactName), contactPhone: optional(parsed.data.contactPhone), notes: optional(parsed.data.notes) } });
+  await db.externalParty.create({ data: { organizationId: actor.organizationId, name: parsed.data.name, types: ["SUPPLIER"], contactName: optional(parsed.data.contactName), contactPhone: optional(parsed.data.contactPhone), notes: optional(parsed.data.notes) } });
   revalidatePath("/live/products");
   redirect("/live/products?success=supplier-created");
 }
@@ -50,7 +50,7 @@ export async function createProduct(formData: FormData) {
   if (!manage(actor.role)) redirect("/live/products?error=forbidden");
   const parsed = productInput.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect("/live/products?error=invalid-product");
-  if (parsed.data.supplierId && !await db.commerceSupplier.findFirst({ where: { id: parsed.data.supplierId, organizationId: actor.organizationId }, select: { id: true } })) redirect("/live/products?error=invalid-supplier");
+  if (parsed.data.supplierId && !await db.externalParty.findFirst({ where: { id: parsed.data.supplierId, organizationId: actor.organizationId, types: { has: "SUPPLIER" } }, select: { id: true } })) redirect("/live/products?error=invalid-supplier");
   await db.commerceProduct.create({ data: { organizationId: actor.organizationId, name: parsed.data.name, sku: optional(parsed.data.sku), supplierId: optional(parsed.data.supplierId), currency: parsed.data.currency, listPrice: optional(parsed.data.listPrice) } });
   revalidatePath("/live/products");
   redirect("/live/products?success=product-created");
