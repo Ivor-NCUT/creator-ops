@@ -1,0 +1,10 @@
+services:
+  postgres:
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+  web:
+    profiles: ["production"]
+  migrate:
+    profiles: ["production"]
+  automation:
+    profiles: ["production"]
