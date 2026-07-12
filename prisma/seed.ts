@@ -1,17 +1,13 @@
 import { auth } from "../src/lib/auth";
 import { db } from "../src/lib/db";
 import { AutomationRuleType } from "../src/generated/prisma/client";
+import { demoDate, getDemoSeedConfig } from "../src/lib/demo-seed";
 
 const DEMO_SLUG = "demo-lighthouse";
-const DEMO_PASSWORD = process.env.DEMO_PASSWORD ?? "CreatorOpsDemo!2026";
+const { password: DEMO_PASSWORD, referenceDate } = getDemoSeedConfig();
 const DEMO_EMAILS = ["owner", "manager", "editor", "host", "hr", "finance"].map((name) => `${name}@demo.creator-ops.example.com`);
-const day = 86_400_000;
-const now = new Date();
-const at = (days: number, hour = 10) => {
-  const date = new Date(now.getTime() + days * day);
-  date.setHours(hour, 0, 0, 0);
-  return date;
-};
+const at = (days: number, hour = 10) => demoDate(referenceDate, days, hour);
+const now = at(0);
 
 async function createUser(name: string, email: string) {
   const result = await auth.api.signUpEmail({ body: { name, email, password: DEMO_PASSWORD } });
@@ -106,9 +102,9 @@ async function main() {
     ] });
 
     const [supplier, customer, service] = await Promise.all([
-      tx.externalParty.create({ data: { organizationId: organization.id, name: "青屿生活制造（虚构）", types: ["SUPPLIER"], contactName: "唐青（虚构）", contactEmail: "supplier@example.invalid" } }),
-      tx.externalParty.create({ data: { organizationId: organization.id, name: "云杉品牌中心（虚构）", types: ["CUSTOMER"], contactName: "白榆（虚构）", contactEmail: "customer@example.invalid" } }),
-      tx.externalParty.create({ data: { organizationId: organization.id, name: "晴窗摄影工作室（虚构）", types: ["SERVICE_PROVIDER"], contactEmail: "studio@example.invalid" } }),
+      tx.externalParty.create({ data: { organizationId: organization.id, name: "青屿生活制造（虚构）", types: ["SUPPLIER"], contactName: "唐青（虚构）", contactEmail: "supplier@example.com" } }),
+      tx.externalParty.create({ data: { organizationId: organization.id, name: "云杉品牌中心（虚构）", types: ["CUSTOMER"], contactName: "白榆（虚构）", contactEmail: "customer@example.com" } }),
+      tx.externalParty.create({ data: { organizationId: organization.id, name: "晴窗摄影工作室（虚构）", types: ["SERVICE_PROVIDER"], contactEmail: "studio@example.com" } }),
     ]);
     const [organizer, cup] = await Promise.all([
       tx.commerceProduct.create({ data: { organizationId: organization.id, supplierId: supplier.id, name: "模块化桌面收纳架（虚构）", sku: "DEMO-ORG-01", listPrice: "129.00" } }),
@@ -138,7 +134,7 @@ async function main() {
     ] as const;
     const employees = [];
     for (const [member, employeeNo, jobTitle, salary] of employeeData) {
-      employees.push(await tx.employeeProfile.create({ data: { organizationId: organization.id, memberId: member.id, employeeNo, jobTitle, hiredAt: at(-300), identity: { create: { legalName: `${member.id.slice(0, 4)}（虚构身份）`, personalEmail: `${employeeNo.toLowerCase()}@example.invalid` } }, compensation: { create: { baseSalary: salary } } } }));
+      employees.push(await tx.employeeProfile.create({ data: { organizationId: organization.id, memberId: member.id, employeeNo, jobTitle, hiredAt: at(-300), identity: { create: { legalName: `${member.id.slice(0, 4)}（虚构身份）`, personalEmail: `${employeeNo.toLowerCase()}@example.com` } }, compensation: { create: { baseSalary: salary } } } }));
     }
     const [managerEmployee, editorEmployee, hostEmployee] = employees;
     const late = await tx.attendanceException.create({ data: { organizationId: organization.id, employeeId: editorEmployee.id, occurredOn: at(-8), kind: "LATE", minutes: 18, reason: "地铁临时停运（虚构）", status: "APPROVED", submittedById: editor.id, approvedById: hr.id, decidedAt: at(-7) } });
@@ -181,7 +177,7 @@ async function main() {
     await tx.fileMetadata.create({ data: { organizationId: organization.id, storageKey: "demo-only/content/spring-campaign-cover.jpg", originalName: "春日活动封面-虚构示例.jpg", contentType: "image/jpeg", sizeBytes: BigInt(348_210) } });
   });
 
-  console.log(`已创建虚构演示组织与 ${users.length} 个可登录账号。密码：${DEMO_PASSWORD}`);
+  console.log(`已创建虚构演示组织与 ${users.length} 个可登录账号（锚点日期：${referenceDate}）。密码来自 DEMO_PASSWORD；未设置时使用 README 中的本地默认值。`);
 }
 
 main().catch(async (error) => {

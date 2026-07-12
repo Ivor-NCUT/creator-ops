@@ -31,6 +31,8 @@ pnpm dev
 
 演示账号由 Better Auth 正常创建，`pnpm db:verify-demo` 会真实登录 Owner，并验证跨模块关系、看板时间范围和异常提醒场景。首次正式使用请勿 seed；空库打开 `/initialize` 创建唯一 Owner。
 
+仿真记录默认以运行 seed 当天（Asia/Shanghai）为锚点，因此总能落在看板近期范围。需要截图、测试或教程可重现时，先设置固定 ISO 日期，例如 `DEMO_REFERENCE_DATE=2026-07-12 pnpm db:seed`。生产环境默认拒绝 seed；只有确认这是独立演示库时才可额外设置 `ALLOW_DEMO_SEED=true`。
+
 ## 已覆盖模块
 
 - 项目任务、AI 提效需求
