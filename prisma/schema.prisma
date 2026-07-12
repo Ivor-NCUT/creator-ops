@@ -8,12 +8,171 @@ datasource db {
 }
 
 model Organization {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  timezone  String   @default("Asia/Shanghai")
-  locale    String   @default("zh-CN")
-  currency  String   @default("CNY")
+  id            String         @id @default(cuid())
+  name          String
+  slug          String         @unique
+  timezone      String         @default("Asia/Shanghai")
+  locale        String         @default("zh-CN")
+  currency      String         @default("CNY")
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  departments   Department[]
+  members       Member[]
+  auditEvents   AuditEvent[]
+  files         FileMetadata[]
+  notifications Notification[]
+}
+
+enum SystemRole {
+  OWNER
+  ADMIN
+  HR
+  FINANCE
+  MANAGER
+  MEMBER
+  VIEWER
+}
+
+enum MemberStatus {
+  ACTIVE
+  DISABLED
+}
+
+model User {
+  id            String    @id
+  name          String
+  email         String
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+  member        Member?
+
+  @@unique([email])
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+model Department {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  name           String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  members        Member[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+}
+
+model Member {
+  id             String         @id @default(cuid())
+  organizationId String
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  userId         String         @unique
+  user           User           @relation(fields: [userId], references: [id], onDelete: Restrict)
+  departmentId   String?
+  department     Department?    @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  role           SystemRole     @default(MEMBER)
+  status         MemberStatus   @default(ACTIVE)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  auditEvents    AuditEvent[]   @relation("AuditActor")
+  notifications  Notification[]
+
+  @@index([organizationId, role])
+  @@index([departmentId])
+}
+
+model AuditEvent {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  actorId        String?
+  actor          Member?      @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  action         String
+  entityType     String
+  entityId       String?
+  metadata       Json?
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([entityType, entityId])
+}
+
+model FileMetadata {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  storageKey     String       @unique
+  originalName   String
+  contentType    String
+  sizeBytes      BigInt
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, createdAt])
+}
+
+model Notification {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  recipientId    String
+  recipient      Member       @relation(fields: [recipientId], references: [id], onDelete: Restrict)
+  title          String
+  body           String?
+  readAt         DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([recipientId, readAt, createdAt])
 }

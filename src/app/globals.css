@@ -16,3 +16,28 @@ body {
   background: var(--background);
   color: var(--foreground);
 }
+
+input, select {
+  width: 100%;
+  margin-top: 0.4rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  background: white;
+  padding: 0.65rem 0.75rem;
+  color: #0f172a;
+}
+
+label { font-size: 0.875rem; font-weight: 600; color: #334155; }
+th, td { padding: 0.85rem 1rem; border-bottom: 1px solid #e2e8f0; }
+
+.auth-shell { min-height: 100dvh; display: grid; place-items: center; padding: 1.5rem; }
+.auth-card { width: 100%; max-width: 30rem; border: 1px solid #e2e8f0; border-radius: 1rem; background: white; padding: 2rem; box-shadow: 0 16px 40px rgb(15 23 42 / 0.06); }
+.eyebrow { margin-bottom: 0.75rem; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #047857; }
+.form-stack { display: grid; gap: 1rem; margin-top: 1.5rem; }
+.button-primary, .button-secondary { display: inline-flex; min-height: 2.65rem; align-items: center; justify-content: center; border-radius: 0.55rem; padding: 0.6rem 1rem; font-weight: 650; cursor: pointer; }
+.button-primary { background: #047857; color: white; }
+.button-secondary { border: 1px solid #cbd5e1; background: white; color: #334155; }
+.form-error, .form-success { margin-top: 1rem; border-radius: 0.5rem; padding: 0.75rem; font-size: 0.875rem; }
+.form-error { background: #fef2f2; color: #b91c1c; }
+.form-success { background: #ecfdf5; color: #047857; }
+.panel { border: 1px solid #e2e8f0; border-radius: 0.75rem; background: white; padding: 1.5rem; }
