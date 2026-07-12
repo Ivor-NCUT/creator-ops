@@ -41,6 +41,8 @@ model Organization {
   majorErrors            MajorError[]
   contracts              Contract[]
   paymentItems           PaymentItem[]
+  automationRules        AutomationRule[]
+  automationRuns         AutomationRun[]
 }
 
 enum SystemRole {
@@ -172,6 +174,7 @@ model Member {
   contractOwnership             Contract[]                  @relation("ContractOwner")
   contractStatusChanges         ContractStatusHistory[]
   paymentRecords                PaymentRecord[]
+  automationRules               AutomationRule[]
 
   @@index([organizationId, role])
   @@index([departmentId])
@@ -1004,8 +1007,60 @@ model Notification {
   recipient      Member       @relation(fields: [recipientId], references: [id], onDelete: Restrict)
   title          String
   body           String?
+  href           String?
+  dedupeKey      String?      @unique
   readAt         DateTime?
   createdAt      DateTime     @default(now())
 
   @@index([recipientId, readAt, createdAt])
+}
+
+enum AutomationRuleType {
+  LIVE_REMINDER
+  CONTRACT_EXPIRY
+  NEGATIVE_FEEDBACK
+  VIDEO_SLA
+  OWNER_EXCEPTIONS
+}
+
+enum AutomationRunStatus {
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+model AutomationRule {
+  id             String             @id @default(cuid())
+  organizationId String
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  type           AutomationRuleType
+  enabled        Boolean            @default(true)
+  recipientId    String?
+  recipient      Member?            @relation(fields: [recipientId], references: [id], onDelete: Restrict)
+  config         Json               @default("{}")
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  runs           AutomationRun[]
+
+  @@unique([organizationId, type])
+  @@index([organizationId, enabled])
+}
+
+model AutomationRun {
+  id             String              @id @default(cuid())
+  organizationId String
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  ruleId         String
+  rule           AutomationRule      @relation(fields: [ruleId], references: [id], onDelete: Restrict)
+  idempotencyKey String
+  status         AutomationRunStatus @default(RUNNING)
+  attempt        Int                 @default(1)
+  notifications Int                 @default(0)
+  error          String?
+  startedAt      DateTime            @default(now())
+  finishedAt     DateTime?
+
+  @@unique([organizationId, idempotencyKey])
+  @@index([organizationId, startedAt])
+  @@index([ruleId, status, startedAt])
 }

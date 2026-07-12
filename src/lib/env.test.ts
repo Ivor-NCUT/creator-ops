@@ -7,6 +7,7 @@ test("server environment validates required URLs", () => {
   process.env.DATABASE_URL = "postgresql://user:pass@localhost:5432/app";
   process.env.BETTER_AUTH_URL = "http://localhost:3000";
   process.env.BETTER_AUTH_SECRET = "test-secret-with-at-least-32-characters";
+  process.env.AUTOMATION_SECRET = "test-automation-secret-at-least-32-characters";
 
   const env = getServerEnv();
   assert.equal(env.DATABASE_URL, "postgresql://user:pass@localhost:5432/app");
