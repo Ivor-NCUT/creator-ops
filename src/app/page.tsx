@@ -8,8 +8,8 @@ import { roleCan } from "@/lib/roles";
 export const dynamic = "force-dynamic";
 
 const modules = [
-  ["工作", "项目、任务与 AI 提效需求"],
-  ["内容", "短视频、公众号与图书生产排期"],
+  ["工作", "项目、任务与 AI 提效需求", "/work"],
+  ["内容", "短视频、公众号与图书生产排期", "/content"],
   ["直播电商", "直播场次、商品经营与客诉"],
   ["人员", "员工、考勤、薪资与绩效"],
   ["商务", "客户、服务商、合同与收付款"],
@@ -44,10 +44,10 @@ export default async function Home() {
       </header>
 
       <section className="grid flex-1 grid-cols-1 gap-x-10 md:grid-cols-2 lg:grid-cols-3">
-        {modules.map(([name, description], index) => (
+        {modules.map(([name, description, href], index) => (
           <article key={name} className="border-b border-slate-200 py-8">
             <p className="text-sm tabular-nums text-slate-400">{String(index + 1).padStart(2, "0")}</p>
-            <h2 className="mt-5 text-xl font-semibold text-slate-950">{name}</h2>
+            <h2 className="mt-5 text-xl font-semibold text-slate-950">{href ? <Link href={href}>{name}</Link> : name}</h2>
             <p className="mt-2 leading-7 text-slate-600">{description}</p>
           </article>
         ))}
