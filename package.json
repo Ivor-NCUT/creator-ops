@@ -2,17 +2,22 @@
   "name": "creator-ops",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@10.22.0",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test 'src/**/*.test.ts'",
+    "test": "tsx --test 'src/**/*.test.ts' 'scripts/**/*.test.ts'",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
     "db:dev": "prisma migrate dev",
     "db:studio": "prisma studio",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:demo:reset": "sh scripts/reset-demo.sh",
+    "db:verify-demo": "tsx scripts/verify-demo.ts",
+    "import:feishu": "tsx scripts/import-feishu.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

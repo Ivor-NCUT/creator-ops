@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: creator_ops
+          POSTGRES_USER: creator_ops
+          POSTGRES_PASSWORD: creator_ops_ci
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U creator_ops -d creator_ops"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://creator_ops:creator_ops_ci@localhost:5432/creator_ops
+      BETTER_AUTH_URL: http://localhost:3100
+      BETTER_AUTH_SECRET: ci-only-better-auth-secret-at-least-32-chars
+      AUTOMATION_SECRET: ci-only-automation-secret-at-least-32-chars
+      DEMO_PASSWORD: CreatorOpsDemo!2026
+      POSTGRES_DB: creator_ops
+      POSTGRES_USER: creator_ops
+      POSTGRES_PASSWORD: creator_ops_ci
+      APP_PORT: 3100
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10.22.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:migrate
+      - run: pnpm db:seed
+      - run: pnpm db:verify-demo
+      - run: pnpm import:feishu -- --file examples/feishu/projects-fictional.csv --type projects
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+      - name: Smoke test production Compose stack
+        run: |
+          docker compose up -d --build
+          for attempt in {1..24}; do
+            curl --fail --silent --show-error http://localhost:3100/api/health && exit 0
+            sleep 5
+          done
+          docker compose logs migrate web automation
+          exit 1
+      - if: always()
+        run: docker compose down -v
