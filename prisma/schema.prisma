@@ -757,23 +757,24 @@ enum MajorErrorStatus {
 }
 
 model MajorError {
-  id             String           @id @default(cuid())
-  organizationId String
-  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  employeeId     String
-  employee       EmployeeProfile  @relation(fields: [employeeId], references: [id], onDelete: Restrict)
-  occurredOn     DateTime         @db.Date
-  title          String
-  detail         String?
-  penaltyAmount  Decimal          @default(0) @db.Decimal(18, 2)
-  status         MajorErrorStatus @default(REPORTED)
-  reportedById   String
-  reportedBy     Member           @relation("MajorErrorReporter", fields: [reportedById], references: [id], onDelete: Restrict)
-  reviewedById   String?
-  reviewedBy     Member?          @relation("MajorErrorReviewer", fields: [reviewedById], references: [id], onDelete: Restrict)
-  reviewedAt     DateTime?
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  id               String           @id @default(cuid())
+  organizationId   String
+  organization     Organization     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  employeeId       String
+  employee         EmployeeProfile  @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  occurredOn       DateTime         @db.Date
+  title            String
+  detail           String?
+  penaltyAmount    Decimal          @default(0) @db.Decimal(18, 2)
+  includeInPayroll Boolean          @default(true)
+  status           MajorErrorStatus @default(REPORTED)
+  reportedById     String
+  reportedBy       Member           @relation("MajorErrorReporter", fields: [reportedById], references: [id], onDelete: Restrict)
+  reviewedById     String?
+  reviewedBy       Member?          @relation("MajorErrorReviewer", fields: [reviewedById], references: [id], onDelete: Restrict)
+  reviewedAt       DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 
   @@index([organizationId, status, occurredOn])
   @@index([employeeId, occurredOn])

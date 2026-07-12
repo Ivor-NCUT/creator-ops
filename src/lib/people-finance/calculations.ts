@@ -17,6 +17,16 @@ export function paymentStatus(amount: Money, paidAmount: Money) {
   return paid.gte(amount) ? "PAID" as const : "PARTIAL" as const;
 }
 
+export function payrollPenaltyWhere(organizationId: string, employeeId: string, year: number, month: number) {
+  return {
+    organizationId,
+    employeeId,
+    status: "CONFIRMED" as const,
+    includeInPayroll: true,
+    occurredOn: { gte: new Date(Date.UTC(year, month - 1, 1)), lt: new Date(Date.UTC(year, month, 1)) },
+  };
+}
+
 export type AttendanceSource = { kind: "LATE" | "EARLY_LEAVE" | "ABSENCE" | "LEAVE" | "MISSING_PUNCH" | "OVERTIME" | "OTHER"; minutes: number | null; days: Prisma.Decimal | null };
 
 export function summarizeAttendance(items: AttendanceSource[]) {

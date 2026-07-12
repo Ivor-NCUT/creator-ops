@@ -160,6 +160,7 @@ CREATE TABLE "MajorError" (
     "title" TEXT NOT NULL,
     "detail" TEXT,
     "penaltyAmount" DECIMAL(18,2) NOT NULL DEFAULT 0,
+    "includeInPayroll" BOOLEAN NOT NULL DEFAULT true,
     "status" "MajorErrorStatus" NOT NULL DEFAULT 'REPORTED',
     "reportedById" TEXT NOT NULL,
     "reviewedById" TEXT,

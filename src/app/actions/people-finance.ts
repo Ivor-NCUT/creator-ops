@@ -2,12 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { Prisma } from "@/generated/prisma/client";
 import { requireMember } from "@/lib/authorization";
 import { recordAuditEvent } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { canManageFinance, canManagePeople } from "@/lib/people-finance/access";
-import { calculateNetPay } from "@/lib/people-finance/calculations";
-import { attendanceDecisionInput, attendanceInput, employeeInput, majorErrorInput, payrollInput } from "@/lib/people-finance/input";
+import { calculateNetPay, payrollPenaltyWhere } from "@/lib/people-finance/calculations";
+import { attendanceDecisionInput, attendanceInput, employeeInput, majorErrorInput, payrollInput, payrollMonthInput } from "@/lib/people-finance/input";
 import { decideAttendance, decideMajorError, rebuildMonthlyAttendance } from "@/lib/people-finance/service";
 
 const optional = (value?: string) => value || null;
@@ -48,9 +49,9 @@ export async function decideAttendanceException(formData: FormData) {
 }
 
 export async function summarizeAttendanceMonth(formData: FormData) {
-  const actor = await requireMember(); const employeeId = String(formData.get("employeeId") ?? ""); const year = Number(formData.get("year")); const month = Number(formData.get("month"));
-  if (!employeeId || !Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) redirect("/people/attendance?error=invalid-month");
-  try { await rebuildMonthlyAttendance(actor, employeeId, year, month); } catch { redirect("/people/attendance?error=summary-failed"); }
+  const actor = await requireMember(); const parsed = payrollMonthInput.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect("/people/attendance?error=invalid-month");
+  try { await rebuildMonthlyAttendance(actor, parsed.data.employeeId, parsed.data.year, parsed.data.month); } catch { redirect("/people/attendance?error=summary-failed"); }
   revalidatePath("/people/attendance"); redirect("/people/attendance?success=summary-rebuilt");
 }
 
@@ -58,11 +59,14 @@ export async function savePayrollMonth(formData: FormData) {
   const actor = await requireMember(); if (!canManageFinance(actor)) redirect("/people/payroll?error=forbidden");
   const parsed = payrollInput.safeParse(Object.fromEntries(formData)); if (!parsed.success) redirect("/people/payroll?error=invalid-payroll");
   const employee = await db.employeeProfile.findFirst({ where: { id: parsed.data.employeeId, organizationId: actor.organizationId }, select: { id: true } }); if (!employee) redirect("/people/payroll?error=invalid-employee");
-  const { employeeId, year, month, ...parts } = parsed.data; const netPay = calculateNetPay(parts); if (netPay.isNegative()) redirect("/people/payroll?error=negative-net");
-  await db.$transaction(async (tx) => {
-    const row = await tx.payrollMonth.upsert({ where: { employeeId_year_month: { employeeId, year, month } }, create: { organizationId: actor.organizationId, employeeId, year, month, ...parts, note: optional(parts.note), netPay }, update: { ...parts, note: optional(parts.note), netPay } });
-    await recordAuditEvent(tx, { organizationId: actor.organizationId, actorId: actor.id, action: "payroll.save", entityType: "PayrollMonth", entityId: row.id, metadata: { year, month } });
-  });
+  const { employeeId, year, month, ...parts } = parsed.data;
+  try { await db.$transaction(async (tx) => {
+    const result = await tx.majorError.aggregate({ where: payrollPenaltyWhere(actor.organizationId, employeeId, year, month), _sum: { penaltyAmount: true } });
+    const penalties = result._sum.penaltyAmount ?? new Prisma.Decimal(0); const netPay = calculateNetPay({ ...parts, penalties });
+    if (netPay.isNegative()) throw new Error("Payroll net pay cannot be negative");
+    const row = await tx.payrollMonth.upsert({ where: { employeeId_year_month: { employeeId, year, month } }, create: { organizationId: actor.organizationId, employeeId, year, month, ...parts, note: optional(parts.note), penalties, netPay }, update: { ...parts, note: optional(parts.note), penalties, netPay } });
+    await recordAuditEvent(tx, { organizationId: actor.organizationId, actorId: actor.id, action: "payroll.save", entityType: "PayrollMonth", entityId: row.id, metadata: { year, month, penalties: penalties.toFixed(2) } });
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }); } catch { redirect("/people/payroll?error=payroll-save-failed"); }
   revalidatePath("/people/payroll"); redirect("/people/payroll?success=payroll-saved");
 }
 
