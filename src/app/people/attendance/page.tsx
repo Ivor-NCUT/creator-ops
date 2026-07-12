@@ -1,0 +1,24 @@
+import Link from "next/link";
+import { decideAttendanceException, submitAttendanceException, summarizeAttendanceMonth } from "@/app/actions/people-finance";
+import { AppShell, Notice, StatusBadge } from "@/components/app-shell";
+import { requirePagePermission } from "@/lib/authorization";
+import { canManagePeople } from "@/lib/people-finance/access";
+import { db } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
+
+export default async function AttendancePage({ searchParams }: { searchParams: Promise<{ error?: string; success?: string }> }) {
+  const actor = await requirePagePermission(); const query = await searchParams; const privileged = canManagePeople(actor);
+  const employeeWhere = actor.role === "MANAGER" ? { member: { departmentId: actor.departmentId ?? "__none__" } } : privileged ? {} : { memberId: actor.id };
+  const [employees, exceptions, summaries] = await Promise.all([
+    db.employeeProfile.findMany({ where: { organizationId: actor.organizationId, ...employeeWhere }, select: { id: true, employeeNo: true, member: { select: { user: { select: { name: true } } } } }, orderBy: { employeeNo: "asc" } }),
+    db.attendanceException.findMany({ where: { organizationId: actor.organizationId, employee: employeeWhere }, include: { employee: { select: { member: { select: { user: { select: { name: true } } } } } }, submittedBy: { select: { user: { select: { name: true } } } } }, orderBy: { occurredOn: "desc" }, take: 100 }),
+    db.monthlyAttendance.findMany({ where: { organizationId: actor.organizationId, employee: employeeWhere }, include: { employee: { select: { member: { select: { user: { select: { name: true } } } } } } }, orderBy: [{ year: "desc" }, { month: "desc" }], take: 50 }),
+  ]);
+  const mayApprove = privileged || actor.role === "MANAGER";
+  return <AppShell eyebrow="People" title="考勤异常与月度汇总"><Notice {...query} /><div className="subnav"><Link href="/people">员工</Link><Link href="/people/attendance">考勤异常</Link><Link href="/people/payroll">薪资绩效</Link></div>
+    <section className="dashboard-grid"><div className="panel span-2"><h2>异常申请</h2>{exceptions.length === 0 ? <p className="empty-state">暂无考勤异常。</p> : <div className="record-stack">{exceptions.map((item) => <article className="record-row" key={item.id}><div><h3>{item.employee.member.user.name} · {item.kind}</h3><p>{item.occurredOn.toLocaleDateString("zh-CN")} · {item.reason} · 由 {item.submittedBy.user.name} 提交</p></div><div><StatusBadge>{item.status}</StatusBadge>{mayApprove && item.status === "PENDING" && <form action={decideAttendanceException} className="status-form"><input type="hidden" name="id" value={item.id} /><select name="to"><option value="APPROVED">批准</option><option value="REJECTED">拒绝</option></select><button className="button-secondary" type="submit">决定</button></form>}</div></article>)}</div>}</div>
+      <form action={submitAttendanceException} className="panel form-stack compact-form"><h2>提交异常</h2><label>员工<select name="employeeId" required>{employees.map((e) => <option key={e.id} value={e.id}>{e.member.user.name} · {e.employeeNo}</option>)}</select></label><label>日期<input name="occurredOn" type="date" required /></label><label>类型<select name="kind"><option value="LATE">迟到</option><option value="EARLY_LEAVE">早退</option><option value="ABSENCE">缺勤</option><option value="LEAVE">请假</option><option value="MISSING_PUNCH">缺卡</option><option value="OVERTIME">加班</option><option value="OTHER">其他</option></select></label><label>分钟<input name="minutes" type="number" min={0} /></label><label>天数<input name="days" inputMode="decimal" /></label><label>原因<textarea name="reason" required /></label><button className="button-primary" type="submit">提交审批</button></form></section>
+    <section className="dashboard-grid mt-6"><div className="panel span-2"><h2>月度汇总（只提供薪资参考，不自动扣薪）</h2>{summaries.length === 0 ? <p className="empty-state">尚未生成月度汇总。</p> : <div className="table-scroll"><table><thead><tr><th>月份</th><th>员工</th><th>异常</th><th>迟到</th><th>缺勤 / 请假</th><th>加班</th></tr></thead><tbody>{summaries.map((s) => <tr key={s.id}><td>{s.year}-{String(s.month).padStart(2, "0")}</td><td>{s.employee.member.user.name}</td><td>{s.approvedExceptions}</td><td>{s.lateMinutes} 分钟</td><td>{s.absenceDays.toFixed(2)} / {s.leaveDays.toFixed(2)} 天</td><td>{s.overtimeMinutes} 分钟</td></tr>)}</tbody></table></div>}</div>{mayApprove && <form action={summarizeAttendanceMonth} className="panel form-stack compact-form"><h2>重建月度汇总</h2><label>员工<select name="employeeId">{employees.map((e) => <option key={e.id} value={e.id}>{e.member.user.name}</option>)}</select></label><label>年份<input name="year" type="number" min={2000} max={2200} defaultValue={new Date().getFullYear()} /></label><label>月份<input name="month" type="number" min={1} max={12} defaultValue={new Date().getMonth() + 1} /></label><button className="button-secondary" type="submit">按已批准记录汇总</button></form>}</section>
+  </AppShell>;
+}

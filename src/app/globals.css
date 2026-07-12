@@ -100,6 +100,17 @@ th { color: #64748b; font-size: .75rem; letter-spacing: .04em; text-transform: u
 .checkbox-label { display: flex; align-items: center; gap: .55rem; }
 .checkbox-label input { width: auto; margin: 0; }
 .whitespace-pre-wrap { white-space: pre-wrap; }
+.cell-note { display: block; margin-top: .25rem; color: #64748b; font-size: .75rem; }
+.summary-strip { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+.summary-strip > div { border: 1px solid #e2e8f0; border-radius: .75rem; background: white; padding: 1rem 1.25rem; }
+.summary-strip span, .summary-strip strong { display: block; }
+.summary-strip span { color: #64748b; font-size: .8rem; }
+.summary-strip strong { margin-top: .3rem; font-size: 1.4rem; }
+.payment-card { border-top: 1px solid #e2e8f0; }
+.payment-card:first-child { border-top: 0; }
+.payment-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: .6rem; align-items: end; padding-bottom: 1rem; }
+fieldset { display: grid; gap: .45rem; border: 1px solid #e2e8f0; border-radius: .5rem; padding: .75rem; }
+legend { padding: 0 .35rem; color: #334155; font-size: .875rem; font-weight: 700; }
 
 @media (max-width: 900px) {
   .app-shell { display: block; }
@@ -111,6 +122,7 @@ th { color: #64748b; font-size: .75rem; letter-spacing: .04em; text-transform: u
   .detail-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .metrics-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .feedback-action { grid-template-columns: 1fr; }
+  .payment-form { grid-template-columns: 1fr; }
   .record-row { align-items: flex-start; flex-direction: column; }
   .record-row > div:last-child { justify-items: start; }
 }

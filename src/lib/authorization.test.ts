@@ -15,9 +15,16 @@ test("non-administrative roles cannot manage members", () => {
 
 test("sensitive permissions remain separated", () => {
   assert.equal(roleCan("HR", "people:sensitive"), true);
-  assert.equal(roleCan("HR", "finance:read"), false);
+  assert.equal(roleCan("HR", "finance:read"), true);
   assert.equal(roleCan("FINANCE", "finance:read"), true);
   assert.equal(roleCan("FINANCE", "people:sensitive"), false);
+});
+
+test("finance and manager boundaries stay server enforceable", () => {
+  assert.equal(roleCan("FINANCE", "crm:manage"), true);
+  assert.equal(roleCan("MANAGER", "crm:read"), true);
+  assert.equal(roleCan("MANAGER", "crm:manage"), false);
+  assert.equal(roleCan("MEMBER", "finance:read"), false);
 });
 
 test("live commerce management is limited to operational managers", () => {
