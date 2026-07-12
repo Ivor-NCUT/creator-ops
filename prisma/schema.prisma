@@ -21,6 +21,14 @@ model Organization {
   auditEvents   AuditEvent[]
   files         FileMetadata[]
   notifications Notification[]
+  projects      Project[]
+  tasks         Task[]
+  aiRequests    AiRequest[]
+  contentProfiles ContentProfile[]
+  publishingAccounts PublishingAccount[]
+  contentItems  ContentItem[]
+  publications  Publication[]
+  workEvents    WorkEvent[]
 }
 
 enum SystemRole {
@@ -129,9 +137,306 @@ model Member {
   updatedAt      DateTime       @updatedAt
   auditEvents    AuditEvent[]   @relation("AuditActor")
   notifications  Notification[]
+  ownedProjects  Project[]            @relation("ProjectOwner")
+  projectMemberships ProjectMember[]
+  assignedTasks  Task[]               @relation("TaskAssignee")
+  requestedAiRequests AiRequest[]      @relation("AiRequester")
+  ownedAiRequests AiRequest[]          @relation("AiOwner")
+  ownedContent   ContentItem[]         @relation("ContentOwner")
+  contentStatusChanges ContentStatusHistory[]
+  contentAssignments ContentAssignment[]
+  workEvents     WorkEvent[]
 
   @@index([organizationId, role])
   @@index([departmentId])
+}
+
+enum WorkStatus {
+  PLANNED
+  ACTIVE
+  BLOCKED
+  DONE
+  CANCELLED
+}
+
+enum Priority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+model Project {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  name           String
+  description    String?
+  status         WorkStatus   @default(PLANNED)
+  priority       Priority     @default(NORMAL)
+  ownerId        String
+  owner          Member       @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  startsAt       DateTime?
+  dueAt          DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  members        ProjectMember[]
+  tasks          Task[]
+  aiRequests     AiRequest[]
+  contentItems   ContentItem[]
+
+  @@index([organizationId, status, dueAt])
+}
+
+model ProjectMember {
+  projectId String
+  memberId  String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  member    Member  @relation(fields: [memberId], references: [id], onDelete: Restrict)
+
+  @@id([projectId, memberId])
+  @@index([memberId])
+}
+
+model Task {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  projectId      String
+  project        Project      @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  parentId       String?
+  parent         Task?        @relation("TaskChildren", fields: [parentId], references: [id], onDelete: Restrict)
+  children       Task[]       @relation("TaskChildren")
+  title          String
+  description    String?
+  status         WorkStatus   @default(PLANNED)
+  priority       Priority     @default(NORMAL)
+  assigneeId     String?
+  assignee       Member?      @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: Restrict)
+  dueAt          DateTime?
+  completedAt    DateTime?
+  points         Int          @default(1)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId, status, dueAt])
+  @@index([projectId, parentId])
+  @@index([assigneeId])
+}
+
+enum AiRequestStatus {
+  SUBMITTED
+  TRIAGED
+  IN_PROGRESS
+  VALIDATING
+  DELIVERED
+  REJECTED
+}
+
+model AiRequest {
+  id             String          @id @default(cuid())
+  organizationId String
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  projectId      String?
+  project        Project?        @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  title          String
+  problem        String
+  expectedOutcome String
+  status         AiRequestStatus @default(SUBMITTED)
+  priority       Priority        @default(NORMAL)
+  requesterId    String
+  requester      Member          @relation("AiRequester", fields: [requesterId], references: [id], onDelete: Restrict)
+  ownerId        String?
+  owner          Member?         @relation("AiOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  dueAt          DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([organizationId, status, dueAt])
+  @@index([requesterId])
+  @@index([ownerId])
+}
+
+enum ContentType {
+  VIDEO
+  ARTICLE
+  BOOK
+}
+
+enum ContentStatus {
+  IDEA
+  READY_TO_SHOOT
+  ROUGH_CUT
+  FINE_CUT
+  REVIEW
+  RETAKE
+  REJECTED
+  SCHEDULED
+  PUBLISHED
+  ARCHIVED
+}
+
+model ContentProfile {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  name           String
+  active         Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  contentItems   ContentItem[]
+
+  @@unique([organizationId, name])
+}
+
+model PublishingAccount {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  name           String
+  channel        String
+  active         Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  publications   Publication[]
+
+  @@unique([organizationId, channel, name])
+}
+
+model ContentItem {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  projectId      String?
+  project        Project?     @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  profileId      String?
+  profile        ContentProfile? @relation(fields: [profileId], references: [id], onDelete: Restrict)
+  ownerId        String
+  owner          Member       @relation("ContentOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  type           ContentType
+  title          String
+  summary        String?
+  status         ContentStatus @default(IDEA)
+  priority       Priority      @default(NORMAL)
+  plannedAt      DateTime?
+  dueAt          DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  video          VideoDetail?
+  editorial      EditorialDetail?
+  statusHistory  ContentStatusHistory[]
+  assignments    ContentAssignment[]
+  publications   Publication[]
+  workEvents     WorkEvent[]
+
+  @@index([organizationId, type, status, plannedAt])
+  @@index([ownerId])
+}
+
+model VideoDetail {
+  contentId       String      @id
+  content         ContentItem @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  scriptUrl       String?
+  footageUrl      String?
+  workloadPoints  Int         @default(1)
+  slaStartedAt    DateTime?
+}
+
+model EditorialDetail {
+  contentId       String      @id
+  content         ContentItem @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  topic           String?
+  manuscriptUrl   String?
+  workloadPoints  Int         @default(1)
+}
+
+enum ContentAssignmentRole {
+  OWNER
+  DIRECTOR
+  EDITOR
+  WRITER
+  REVIEWER
+}
+
+model ContentAssignment {
+  contentId String
+  memberId  String
+  role      ContentAssignmentRole
+  content   ContentItem @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  member    Member      @relation(fields: [memberId], references: [id], onDelete: Restrict)
+
+  @@id([contentId, memberId, role])
+  @@index([memberId, role])
+}
+
+model ContentStatusHistory {
+  id          String        @id @default(cuid())
+  contentId   String
+  content     ContentItem   @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  fromStatus  ContentStatus?
+  toStatus    ContentStatus
+  actorId     String
+  actor       Member        @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  note        String?
+  createdAt   DateTime      @default(now())
+
+  @@index([contentId, createdAt])
+  @@index([actorId, createdAt])
+}
+
+model Publication {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  contentId      String
+  content        ContentItem  @relation(fields: [contentId], references: [id], onDelete: Restrict)
+  accountId      String
+  account        PublishingAccount @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  publishedAt    DateTime
+  url            String?
+  createdAt      DateTime     @default(now())
+  metricSnapshots PublicationMetricSnapshot[]
+
+  @@unique([contentId, accountId, publishedAt])
+  @@index([organizationId, publishedAt])
+}
+
+model PublicationMetricSnapshot {
+  id            String      @id @default(cuid())
+  publicationId String
+  publication   Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  capturedAt    DateTime
+  views         Int         @default(0)
+  likes         Int         @default(0)
+  comments      Int         @default(0)
+  shares        Int         @default(0)
+  followers     Int?
+  createdAt     DateTime    @default(now())
+
+  @@unique([publicationId, capturedAt])
+  @@index([capturedAt])
+}
+
+enum WorkEventType {
+  CONTENT_CREATED
+  CONTENT_TRANSITION
+  CONTENT_PUBLISHED
+}
+
+model WorkEvent {
+  id             String        @id @default(cuid())
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  memberId       String
+  member         Member        @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  contentId      String
+  content        ContentItem   @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  type           WorkEventType
+  points         Int
+  occurredAt     DateTime      @default(now())
+
+  @@index([organizationId, occurredAt])
+  @@index([memberId, occurredAt])
 }
 
 model AuditEvent {
