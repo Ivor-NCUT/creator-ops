@@ -9,16 +9,17 @@ export const permissions = [
   "finance:read",
   "work:manage",
   "content:manage",
+  "live:manage",
 ] as const;
 
 export type Permission = (typeof permissions)[number];
 
 const rolePermissions = {
   OWNER: permissions,
-  ADMIN: ["organization:manage", "members:read", "members:manage", "audit:read", "work:manage", "content:manage"],
+  ADMIN: ["organization:manage", "members:read", "members:manage", "audit:read", "work:manage", "content:manage", "live:manage"],
   HR: ["members:read", "people:sensitive"],
   FINANCE: ["finance:read"],
-  MANAGER: ["members:read", "work:manage", "content:manage"],
+  MANAGER: ["members:read", "work:manage", "content:manage", "live:manage"],
   MEMBER: [],
   VIEWER: [],
 } as const satisfies Record<SystemRole, readonly Permission[]>;

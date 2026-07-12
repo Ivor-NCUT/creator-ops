@@ -1,0 +1,23 @@
+import Link from "next/link";
+import { changeFeedbackStatus, createFeedback } from "@/app/actions/live-commerce";
+import { AppShell, Notice, StatusBadge } from "@/components/app-shell";
+import { requirePagePermission } from "@/lib/authorization";
+import { db } from "@/lib/db";
+import { nextFeedbackStatuses } from "@/lib/live-commerce/state-machines";
+
+export const dynamic = "force-dynamic";
+
+export default async function FeedbackPage({ searchParams }: { searchParams: Promise<{ error?: string; success?: string }> }) {
+  const member = await requirePagePermission(); const query = await searchParams;
+  const [feedback, sessions, products, members] = await Promise.all([
+    db.customerFeedback.findMany({ where: { organizationId: member.organizationId }, include: { assignee: { select: { user: { select: { name: true } } } }, liveSession: { select: { title: true } }, product: { select: { name: true } }, statusHistory: { include: { actor: { select: { user: { select: { name: true } } } } }, orderBy: { createdAt: "desc" } } }, orderBy: { createdAt: "desc" } }),
+    db.liveSession.findMany({ where: { organizationId: member.organizationId }, select: { id: true, title: true }, orderBy: { startsAt: "desc" }, take: 100 }),
+    db.commerceProduct.findMany({ where: { organizationId: member.organizationId, active: true }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
+    db.member.findMany({ where: { organizationId: member.organizationId, status: "ACTIVE" }, select: { id: true, user: { select: { name: true } } } }),
+  ]);
+  return <AppShell eyebrow="Customer feedback" title="评价与客诉"><Notice {...query} /><div className="subnav"><Link href="/live">直播场次</Link><Link href="/live/products">商品与供应商</Link><Link href="/live/feedback">评价与客诉</Link></div>
+    <section className="dashboard-grid"><div className="panel span-2"><h2>处理队列</h2>{feedback.length === 0 ? <p className="empty-state">暂无评价或客诉。</p> : <div className="feedback-stack">{feedback.map((item) => { const next = nextFeedbackStatuses(item.status); return <article className="feedback-card" key={item.id}><div className="section-heading"><div><h3>{item.isNegative ? "⚠ " : ""}{item.title}</h3><p>{item.kind} · {item.category} · {item.liveSession?.title ?? "未关联场次"} · {item.product?.name ?? "未关联商品"}</p></div><StatusBadge>{item.status}</StatusBadge></div><p className="section-copy whitespace-pre-wrap">{item.detail || "无详细说明"}</p><p className="section-copy">负责人：{item.assignee?.user.name ?? "未分配"}</p>{next.length > 0 && <form action={changeFeedbackStatus} className="feedback-action"><input type="hidden" name="id" value={item.id} /><label>下一状态<select name="to">{next.map((status) => <option key={status}>{status}</option>)}</select></label><label>处理记录<input name="note" /></label><label>解决方案<input name="resolution" placeholder="转为 RESOLVED 时必填" /></label><button className="button-secondary" type="submit">更新</button></form>}<details><summary>查看解决历史</summary><ol className="timeline">{item.statusHistory.map((history) => <li key={history.id}><strong>{history.fromStatus ?? "创建"} → {history.toStatus}</strong><span>{history.actor.user.name} · {history.createdAt.toLocaleString("zh-CN")} {history.note ? `· ${history.note}` : ""}</span></li>)}</ol></details></article>; })}</div>}</div>
+      <form action={createFeedback} className="panel form-stack compact-form"><h2>新建反馈</h2><label>类型<select name="kind"><option value="COMPLAINT">客诉</option><option value="REVIEW">评价</option></select></label><label>分类<select name="category"><option value="PRODUCT_QUALITY">商品质量</option><option value="SHIPPING">物流</option><option value="SERVICE">服务</option><option value="REFUND">退款</option><option value="CONTENT">内容</option><option value="OTHER">其他</option></select></label><label>标题<input name="title" required /></label><label>详情<textarea name="detail" /></label><label>来源<input name="source" placeholder="如：平台评论" /></label><label>关联场次<select name="liveSessionId"><option value="">未关联</option>{sessions.map((session) => <option value={session.id} key={session.id}>{session.title}</option>)}</select></label><label>关联商品<select name="productId"><option value="">未关联</option>{products.map((product) => <option value={product.id} key={product.id}>{product.name}</option>)}</select></label><label>负责人<select name="assigneeId"><option value="">未分配</option>{members.map((item) => <option value={item.id} key={item.id}>{item.user.name}</option>)}</select></label><label className="checkbox-label"><input name="isNegative" type="checkbox" /> 负面反馈</label><button className="button-primary" type="submit">创建反馈</button></form>
+    </section>
+  </AppShell>;
+}
