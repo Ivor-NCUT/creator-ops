@@ -1,7 +1,7 @@
 import { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 import type { DashboardDomain } from "./access";
-import { balance, safeRate } from "./calculations";
+import { balance, cashItemWhere, safeRate } from "./calculations";
 
 type Actor = { organizationId: string; departmentId: string | null; role: string };
 type Range = { from: Date; to: Date };
@@ -38,7 +38,7 @@ export async function getDashboard(actor: Actor, range: Range, domains: Dashboar
     result.people = { headcount, pendingExceptions: exceptions, payroll: payrollInRange.reduce((sum, row) => sum.add(row.netPay), zero()), records: payrollInRange };
   }
   if (domains.includes("cash")) {
-    const items = await db.paymentItem.findMany({ where: { organizationId: actor.organizationId, createdAt: { lt: range.to } }, select: { id: true, title: true, direction: true, status: true, amount: true, paidAmount: true, dueOn: true, party: { select: { name: true } }, payments: { where: { paidOn: { lt: range.to } }, select: { amount: true } } }, orderBy: { dueOn: "asc" } });
+    const items = await db.paymentItem.findMany({ where: cashItemWhere(actor.organizationId, range.to), select: { id: true, title: true, direction: true, status: true, amount: true, paidAmount: true, dueOn: true, party: { select: { name: true } }, payments: { where: { paidOn: { lt: range.to } }, select: { amount: true } } }, orderBy: { dueOn: "asc" } });
     const outstanding = (direction: "RECEIVABLE" | "PAYABLE") => items.filter((row) => row.direction === direction).reduce((sum, row) => sum.add(balance(row.amount, row.payments.map(({ amount }) => amount))), zero());
     result.cash = { receivable: outstanding("RECEIVABLE"), payable: outstanding("PAYABLE"), overdue: items.filter((row) => row.dueOn && row.dueOn < asOf && balance(row.amount, row.payments.map(({ amount }) => amount)).gt(0)).length, records: items };
   }

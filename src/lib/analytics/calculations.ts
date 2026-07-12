@@ -10,3 +10,7 @@ export function safeRate(numerator: Money, denominator: Money) {
 export function balance(amount: Money, payments: Money[]) {
   return Prisma.Decimal.max(0, new Prisma.Decimal(amount).sub(payments.reduce<Prisma.Decimal>((sum, payment) => sum.add(payment), new Prisma.Decimal(0))));
 }
+
+export function cashItemWhere(organizationId: string, to: Date) {
+  return { organizationId, status: { not: "CANCELLED" as const }, createdAt: { lt: to } };
+}
