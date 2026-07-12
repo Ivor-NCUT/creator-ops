@@ -6,10 +6,10 @@ import { z } from "zod";
 import { requireMember } from "@/lib/authorization";
 import { db } from "@/lib/db";
 import { roleCan } from "@/lib/roles";
+import { optionalDate, requiredDate, safeReturnPath } from "@/lib/work-content/input";
 import { transitionAiRequest, transitionContent, transitionProject, transitionTask } from "@/lib/work-content/service";
 
 const optionalId = z.string().trim().optional().transform((value) => value || undefined);
-const optionalDate = z.string().trim().optional().transform((value) => value ? new Date(value) : undefined);
 const baseWork = z.object({ title: z.string().trim().min(2).max(160), priority: z.enum(["LOW", "NORMAL", "HIGH", "URGENT"]) });
 const managesWork = (actor: Awaited<ReturnType<typeof requireMember>>) => roleCan(actor.role, "work:manage");
 const managesContent = (actor: Awaited<ReturnType<typeof requireMember>>) => roleCan(actor.role, "content:manage");
@@ -48,7 +48,7 @@ export async function createAiRequest(formData: FormData) {
   redirect("/work?success=ai-request-created");
 }
 
-const transitionSchema = z.object({ id: z.string(), status: z.string(), returnTo: z.string().startsWith("/") });
+const transitionSchema = z.object({ id: z.string(), status: z.string(), returnTo: safeReturnPath });
 async function performTransition(formData: FormData, kind: "project" | "task" | "ai" | "content") {
   const actor = await requireMember();
   const parsed = transitionSchema.safeParse(Object.fromEntries(formData));
@@ -103,7 +103,7 @@ export async function createPublishingProfile(formData: FormData) {
 
 export async function publishContent(formData: FormData) {
   const actor = await requireMember();
-  const parsed = z.object({ contentId: z.string(), accountId: z.string(), publishedAt: z.string().transform((value) => new Date(value)), url: z.url().optional().or(z.literal("")) }).safeParse(Object.fromEntries(formData));
+  const parsed = z.object({ contentId: z.string(), accountId: z.string(), publishedAt: requiredDate, url: z.url().optional().or(z.literal("")) }).safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect("/content?error=invalid-publication");
   const [content, account] = await Promise.all([db.contentItem.findFirst({ where: { id: parsed.data.contentId, organizationId: actor.organizationId, status: "PUBLISHED", ...(managesContent(actor) ? {} : { OR: [{ ownerId: actor.id }, { assignments: { some: { memberId: actor.id } } }] }) }, select: { id: true } }), db.publishingAccount.findFirst({ where: { id: parsed.data.accountId, organizationId: actor.organizationId }, select: { id: true } })]);
   if (!content || !account) redirect("/content?error=invalid-publication-relations");
@@ -117,7 +117,7 @@ export async function publishContent(formData: FormData) {
 
 export async function captureMetrics(formData: FormData) {
   const actor = await requireMember();
-  const parsed = z.object({ publicationId: z.string(), contentId: z.string(), capturedAt: z.string().transform((value) => new Date(value)), views: z.coerce.number().int().min(0), likes: z.coerce.number().int().min(0), comments: z.coerce.number().int().min(0), shares: z.coerce.number().int().min(0) }).safeParse(Object.fromEntries(formData));
+  const parsed = z.object({ publicationId: z.string(), contentId: z.string(), capturedAt: requiredDate, views: z.coerce.number().int().min(0), likes: z.coerce.number().int().min(0), comments: z.coerce.number().int().min(0), shares: z.coerce.number().int().min(0) }).safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(`/content/${String(formData.get("contentId") ?? "")}?error=invalid-metrics`);
   const publication = await db.publication.findFirst({ where: { id: parsed.data.publicationId, organizationId: actor.organizationId, contentId: parsed.data.contentId, ...(managesContent(actor) ? {} : { content: { OR: [{ ownerId: actor.id }, { assignments: { some: { memberId: actor.id } } }] } }) }, select: { id: true } });
   if (!publication) redirect(`/content/${parsed.data.contentId}?error=invalid-publication`);

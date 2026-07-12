@@ -1,6 +1,7 @@
 import type { AiRequestStatus, ContentStatus, WorkStatus } from "@/generated/prisma/client";
 import { AccessDeniedError } from "@/lib/authorization";
 import { db } from "@/lib/db";
+import { recordAuditEvent } from "@/lib/audit";
 import { roleCan } from "@/lib/roles";
 import { canTransitionAi, canTransitionContent, canTransitionWork } from "./state-machines";
 
@@ -15,7 +16,11 @@ export async function transitionProject(actor: Actor, id: string, to: WorkStatus
   if (!project) throw new Error("Project not found");
   if (!canManage(actor, "work:manage") && project.ownerId !== actor.id) throw new AccessDeniedError(403);
   if (!canTransitionWork(project.status, to)) throw new Error("Invalid project transition");
-  await db.project.update({ where: { id }, data: { status: to } });
+  await db.$transaction(async (tx) => {
+    const changed = await tx.project.updateMany({ where: { id, organizationId: actor.organizationId, status: project.status }, data: { status: to } });
+    if (changed.count !== 1) throw new Error("Project changed; reload and retry");
+    await recordAuditEvent(tx, { organizationId: actor.organizationId, actorId: actor.id, action: "project.status_changed", entityType: "Project", entityId: id, metadata: { from: project.status, to } });
+  });
 }
 
 export async function transitionTask(actor: Actor, id: string, to: WorkStatus) {
@@ -23,7 +28,11 @@ export async function transitionTask(actor: Actor, id: string, to: WorkStatus) {
   if (!task) throw new Error("Task not found");
   if (!canManage(actor, "work:manage") && task.assigneeId !== actor.id) throw new AccessDeniedError(403);
   if (!canTransitionWork(task.status, to)) throw new Error("Invalid task transition");
-  await db.task.update({ where: { id }, data: { status: to, completedAt: to === "DONE" ? new Date() : null } });
+  await db.$transaction(async (tx) => {
+    const changed = await tx.task.updateMany({ where: { id, organizationId: actor.organizationId, status: task.status }, data: { status: to, completedAt: to === "DONE" ? new Date() : null } });
+    if (changed.count !== 1) throw new Error("Task changed; reload and retry");
+    await recordAuditEvent(tx, { organizationId: actor.organizationId, actorId: actor.id, action: "task.status_changed", entityType: "Task", entityId: id, metadata: { from: task.status, to } });
+  });
 }
 
 export async function transitionAiRequest(actor: Actor, id: string, to: AiRequestStatus) {
@@ -31,7 +40,11 @@ export async function transitionAiRequest(actor: Actor, id: string, to: AiReques
   if (!request) throw new Error("AI request not found");
   if (!canManage(actor, "work:manage") && request.requesterId !== actor.id && request.ownerId !== actor.id) throw new AccessDeniedError(403);
   if (!canTransitionAi(request.status, to)) throw new Error("Invalid AI request transition");
-  await db.aiRequest.update({ where: { id }, data: { status: to } });
+  await db.$transaction(async (tx) => {
+    const changed = await tx.aiRequest.updateMany({ where: { id, organizationId: actor.organizationId, status: request.status }, data: { status: to } });
+    if (changed.count !== 1) throw new Error("AI request changed; reload and retry");
+    await recordAuditEvent(tx, { organizationId: actor.organizationId, actorId: actor.id, action: "ai_request.status_changed", entityType: "AiRequest", entityId: id, metadata: { from: request.status, to } });
+  });
 }
 
 export async function transitionContent(actor: Actor, id: string, to: ContentStatus, note?: string) {
