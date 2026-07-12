@@ -15,6 +15,10 @@
 - 业务状态由数据库枚举与约束承载，避免在页面里复制字符串判断。
 - 架构或目录变化时同步更新 `README.md` 与 `docs/architecture/`。
 
+## Next.js
+
+- 当前 Next.js 版本可能包含训练数据之后的破坏性变化；写代码前读取 `node_modules/next/dist/docs/` 中对应主题的本地文档并遵循弃用提示。
+
 ## GitHub 协作
 
 - 一个 Issue 对应一个 `codex/<issue-number>-short-name` 分支、一个独立 worktree、一个 Agent 和一个 PR。
